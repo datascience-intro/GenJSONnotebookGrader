@@ -44,10 +44,10 @@ To use the NotebookGrader there are a couple of steps to follow:
 
 ## 1. Create a Master notebook
 The NotebookGrader needs the Master notebook to be in a specific format.
-For instructions on how to create a master notenook see the readme in Test_course(länk)
+For instructions on how to create a master notenook see the readme in [Test_course](https://github.com/datascience-intro/test_course)
 
 ## 2. Generate notebooks
-For instructions on how to generate notebooks, see the readme in Test_course(länk).
+For instructions on how to generate notebooks, see the readme in [Test_course](https://github.com/datascience-intro/test_course).
 
 ## 3. Run the NotebookGrader
 For instructions on how to run the NotebookGrader, see the readme in NotebookGrader -> AutoGrader
