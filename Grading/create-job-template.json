@@ -1,0 +1,7 @@
+{
+  "name": "grading-job",
+  "existing_cluster_id": "ZZZZZZZZZZ",
+  "notebook_task": {
+    "notebook_path": "XXXXXXXXXX/YYYYYYYYYY"
+  }
+}
