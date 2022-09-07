@@ -243,8 +243,11 @@ class DBAutoGrader(Autograder):
                 source_file_name = [file_name for file_name in zipObj.namelist() if file_name.split(".")[-1] != "mf"][0]
 
 
-
-            req = requests.get(f"https://uppsalauni-scadamale-ds-projects.cloud.databricks.com/api/2.0/jobs/runs/export?run_id={id}")
+            
+            
+            host = get_config().host
+            print(host)
+            req = requests.get(f"{host}api/2.0/jobs/runs/export?run_id={id}")
 
             with open("run_res.txt",'w') as f:
                 f.write(json.dumps(req.json()))          
