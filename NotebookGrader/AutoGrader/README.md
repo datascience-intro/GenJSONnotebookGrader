@@ -1,18 +1,6 @@
-## what has been changed
-- DB and IDS have been split into two classes 
-- Autograder is split to more DB or IDS specific-functions, so main file gets more generalized
-- AutoGrader-bash related communication with databricks are now run through the python REST-api
-- removing some comments
-- Fixed bug where non-evaluated TEST-cells still show original code with answers
-- TESTs are injected after every problem instead of last on the page
-- remove path dependencies on AutoGrader-bash folder (will remove it now since using python API)
-- test if everything is working with both python-dbc notebooks and python-jupyter notebooks
-- code will not interrupt if grader is started while cluster is starting (REST code)
-## TODO:
-- lots of filepath-strings
-- final test if everything is working with both python-dbc notebooks and python-jupyter notebooks
-- some functions can still be generalized or added into their respective classes
-
+## TODO
+- Add_header can be moved to respective classes. Inheritance issue here
+- Is_dbc is still left in some places, even though it is not used
 
 ## Prologue
 
