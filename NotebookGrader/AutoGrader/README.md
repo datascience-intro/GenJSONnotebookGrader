@@ -65,7 +65,7 @@ This `configGrading.json` is the different file from the one used for the notebo
 	| master_filename | A path to an extracted notebook with problem and TEST cells |
 	| start_date | A start date to grade the assignment. It starts at 00.01. |
 	| end_date | An end date to grade the assignment, It ends at 23.59. |
-	| dbc_cluster_id | An ID of a cluster on databricks used to execute student submission notebooks. |
+	| dbc_cluster_id | An ID of a cluster on databricks used to execute student submission notebooks. This can be found under "Automatically added tags" on your cluster page in databricks.|
 	| dbc_cluster_name | (optional) A name of the cluster on databricks. |
 	| dbc_workspace_dir| The databricks workspace of your choice. |
 	
