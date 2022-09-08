@@ -981,7 +981,7 @@ class DBAssignmentNotebook(AssignmentNotebook):
         notebook : nbformat.NotebookNode
             the ready made assignment Notebook.
         '''
-        assignmentName = "ASSIGNMENT "+str(self.assignmentNumber)
+        assignmentName = "ASSIGNMENT_"+str(self.assignmentNumber)
         assignmentLanguage = notebook_language
         
 

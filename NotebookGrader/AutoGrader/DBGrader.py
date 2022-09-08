@@ -246,7 +246,6 @@ class DBAutoGrader(Autograder):
             
             
             host = get_config().host
-            print(host)
             req = requests.get(f"{host}api/2.0/jobs/runs/export?run_id={id}")
 
             with open("run_res.txt",'w') as f:

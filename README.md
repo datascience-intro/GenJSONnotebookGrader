@@ -21,7 +21,7 @@ Don't hesitate to raise an issue if you encounter errors.
 
 ## Introduction to the NotebookGrader
 
-This Notebook AutoGrader converts platform-specific notebooks to JSON to be able to run automatic grading of assignments who are then uploaded to Studium using the Canvas API.
+This Notebook AutoGrader converts platform-specific notebooks to JSON to be able to run automatic grading of assignments which are then uploaded to Studium using the Canvas API.
 
 
 This NotebookGrader supports:
@@ -41,6 +41,11 @@ To use the NotebookGrader there are a couple of steps to follow:
     - Problem notebook for students to fill in
 3. Run the NotebookGrader which will fetch student submissions from Canvas, grade them and upload the results.
 
+## 0. Install necessary dependencies
+The NotebookGrader will use `python_on_whales` and `databricks-cli`. Install using
+
+`pip3 install python_on_whales`
+`pip3 install databricks-cli`
 
 ## 1. Create a Master notebook
 The NotebookGrader needs the Master notebook to be in a specific format.
