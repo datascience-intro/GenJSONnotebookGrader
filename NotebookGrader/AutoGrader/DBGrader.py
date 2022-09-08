@@ -232,7 +232,7 @@ class DBAutoGrader(Autograder):
 
             source_path = "./Graded_Notebook_for_" + assName + ".dbc"
             
-            #"/Users/oskar.asbrink.9367@student.uu.se/Grading/TEST_ASSIGNMENT_1/Graded_Notebook_for_TEST_ASSIGNMENT_1.dbc"
+        
             workspace.import_workspace(source_path,target_path_dbc,source_file_extension.upper(),"DBC",False)
             
             
@@ -246,7 +246,8 @@ class DBAutoGrader(Autograder):
             
             
             host = get_config().host
-            req = requests.get(f"{host}api/2.0/jobs/runs/export?run_id={id}")
+            print(host)
+            req = requests.get(f"{host}/api/2.0/jobs/runs/export?run_id={id}")
 
             with open("run_res.txt",'w') as f:
                 f.write(json.dumps(req.json()))          
