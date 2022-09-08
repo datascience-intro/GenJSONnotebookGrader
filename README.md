@@ -21,7 +21,7 @@ Don't hesitate to raise an issue if you encounter errors.
 
 ## Introduction to the NotebookGrader
 
-This Notebook AutoGrader converts platform-specific notebooks to JSON to be able to run automatic grading of assignments who are then uploaded to Studium using the Canvas API.
+This Notebook AutoGrader converts platform-specific notebooks to JSON to be able to run automatic grading of assignments that are then uploaded to Studium using the Canvas API.
 
 
 This NotebookGrader supports:
