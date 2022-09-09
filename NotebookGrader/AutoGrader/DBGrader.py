@@ -6,7 +6,7 @@ import os
 import shutil
 
 class DBAutoGrader(Autograder):
-    def __init__(self, course, assignment, master_nb_filename,sharp=False):
+    def __init__(self, course, assignment, master_nb_filename,sharp=False, workspace_dir = None):
         '''
         Creates an Autograder object
 
@@ -22,9 +22,30 @@ class DBAutoGrader(Autograder):
         #self.master_nb_filename = master_nb_filename
         #self.sharp = sharp
         #self.submissions = None
+        self.workspace_dir = workspace_dir
+        try:
+            self.assignmentName = assignment.attributes['name']
+        except:
+            print("assignment")
+            print(assignment)
+            
         super().__init__(course, assignment, master_nb_filename,sharp)
     
-    
+    def fromDBCtoHTML(self,file_name,destination):
+        api_client = ApiClient(
+                host  = get_config().host,
+                token = get_config().token
+                )
+        workspace = WorkspaceApi(api_client)
+        try:
+            workspace.import_workspace(file_name + ".dbc",destination,"SCALA","DBC",False)
+        except:
+            pass
+
+        workspace.export_workspace(destination, file_name + ".html","HTML",True)
+        workspace.delete(destination,False)
+
+
     def writeResponseFile(self,response_notebook,student_id,submission_attempt,studentSubmissionFileName):
         # write to disk as source file (.scala, .r, etc)
         source_file_extension = studentSubmissionFileName.split(".")[-1]
@@ -37,7 +58,10 @@ class DBAutoGrader(Autograder):
             zipObj.write('Response/Response_%d_%d.%s' % (student_id,submission_attempt,source_file_extension) \
                         ,'Response_%d_%d.%s' % (student_id,submission_attempt,source_file_extension)) #<< Finally got it as .dbc !
         
+        self.fromDBCtoHTML('Response/Response_%d_%d' % (student_id,submission_attempt),self.workspace_dir + "/Grading" + "/Response_%d_%d" % (student_id,submission_attempt))
         # remove source file, so only dbc with source file inside is left.
+
+        
         os.remove('Response/Response_%d_%d.%s' % (student_id,submission_attempt,source_file_extension))
     
 
@@ -164,7 +188,6 @@ class DBAutoGrader(Autograder):
         '''
         if notebook: # pass notebook as json dict for grading     
 
-            
             result = {"stdout":"","timeout":False,"oom_killed":False,"unknown_error":False,"stderr":"","exit_code":0,"duration":0}
             job_conf, grader_conf = initConfigFiles(assName)
     
@@ -217,12 +240,13 @@ class DBAutoGrader(Autograder):
             workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName)
             workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Graded_HTML")
             workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Graded_wo_TEST")
+            workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Grading_Archive")
             
             try:
                 shutil.rmtree(f"./Grading/Graded/{assName}")
                 
             except:
-                print("dbc-folder-remove not needed")
+                pass
             os.makedirs(f"./Grading/Graded/{assName}/dbc_result_dir",exist_ok=True)
             os.makedirs(f"./Grading/Graded/{assName}/html_result_dir",exist_ok=True)
             startCluster(api_client,grader_conf['dbc_cluster_id'])
@@ -255,11 +279,19 @@ class DBAutoGrader(Autograder):
             
 
             workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",dbc_HTML_dir + "/" + pure_name,source_file_extension,"HTML",False)
-            workspace.export_workspace(dbc_HTML_dir + "/" + pure_name , result_dir_dbc + "/" + pure_name,"DBC",True)
+            
+            #import to grading archive with student name + id
+            studentID = self.currentSubmission['user_id']
+            studentName = self.course.get_user(studentID)['name'].replace(" ","_")
+            workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",dbc_grading_dir + "/Grading_Archive/" + pure_name + "_" + studentName + "_" + str(studentID),source_file_extension,"HTML",False)
 
+            workspace.export_workspace(dbc_HTML_dir + "/" + pure_name , result_dir_dbc + "/" + pure_name,"DBC",True)
+            
         
             with ZipFile(result_dir_dbc + "/" + pure_name, mode='r') as zipObj:
                 zipObj.extractall(result_dir_dbc)
+            
+            
 
             
             result_path = "./Grading/Graded/"+assName+"/dbc_result_dir/"+source_file_name
