@@ -43,7 +43,7 @@ for assignment_conf in conf['Assignments']:
         time.sleep(DAY)
     if (datetime.now() > assignment_start_date):
         print("Grading window for %s has started" % assignment_conf['name'])
-        auto = Autograder.makeAutoGrader(course,assignment,assignment_conf,sharp=True)
+        auto = Autograder.makeAutoGrader(course,assignment,assignment_conf,conf,sharp=True)
         while (datetime.now() < assignment_end_date):
             auto.grade()
             print("Taking a 30 minute break")

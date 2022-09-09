@@ -598,7 +598,9 @@ class DBAssignmentNotebook(AssignmentNotebook):
             self.courseDetails, self.assignmentNumber = self._extractCourseDetails(self.notebook) #<< Done
             assert self.courseDetails == DBCourseDetails() # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             self.header = self._extractHeader(self.notebook) #<< Done
-            self.assignments = self._extractProblems(self.notebook) #<< Done 
+            self.assignments = self._extractProblems(self.notebook) #<< Done
+            print("nb_filename",nb_filename)
+            self.assignmentFileName = nb_filename 
         elif courseNotebooks != None:
             self.courseDetails = DBCourseDetails()
             self.assignmentNumber = assignmentNumber
@@ -962,7 +964,7 @@ class DBAssignmentNotebook(AssignmentNotebook):
         """
         return 'commands','command'
 
-        #
+    
     def to_notebook(self,notebook_type='problem_solution_TEST',notebook_language=""):
         '''
         Creates a notebook
@@ -981,7 +983,8 @@ class DBAssignmentNotebook(AssignmentNotebook):
         notebook : nbformat.NotebookNode
             the ready made assignment Notebook.
         '''
-        assignmentName = "ASSIGNMENT_"+str(self.assignmentNumber)
+        
+        assignmentName = "ASSIGNMENT_{}_{}".format(str(self.assignmentNumber), notebook_type)
         assignmentLanguage = notebook_language
         
 

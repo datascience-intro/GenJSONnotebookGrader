@@ -42,7 +42,7 @@ class Autograder:
         self.submissions = None
         #self.nbserver <- databricks, zeppelin, jupyter(incl sage)
     @staticmethod
-    def makeAutoGrader(course,assignment,assignment_conf,sharp=False):
+    def makeAutoGrader(course,assignment,assignment_conf,conf=None,sharp=False):
         #factory function to give correct autograder object
         file_ext = assignment_conf["master_filename"].split(".")[-1]
         if file_ext == "ipynb":
@@ -50,7 +50,7 @@ class Autograder:
             return IDSAutoGrader(course,assignment,assignment_conf['master_filename'],sharp)
         elif file_ext == "dbc":
             from .DBGrader import DBAutoGrader
-            return DBAutoGrader(course,assignment,assignment_conf['master_filename'],sharp)
+            return DBAutoGrader(course,assignment,assignment_conf['master_filename'],sharp,conf['dbc_workspace_dir'])
         else:
             raise Exception("Unknown notebook file extension")
     def _getSubmissions(self): #<< no need to change
@@ -92,7 +92,8 @@ class Autograder:
         user_id = submission['user_id']
         print("Uploading file for user_id: %d" % user_id)
 
-        file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
+        #file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
+        file_extension="html"
         re_str = (self.course.base_req_str
             +  "/assignments/"+ str(self.assignment_id)
             + "/submissions/" +str(user_id)
@@ -275,9 +276,11 @@ class Autograder:
         '''
         self._getSubmissions()
         for submission in self.submissions:
+            self.currentSubmission = submission
             grade, comment,update_grade = self._gradeSubmission(submission,force)
             if (update_grade):
                 self._uploadSubmissionGrade(submission,grade,comment)
+            #upload to databricks
         print("Grading round complete!")
 
 
