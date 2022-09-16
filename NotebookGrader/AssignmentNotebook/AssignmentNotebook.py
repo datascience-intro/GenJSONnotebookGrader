@@ -190,7 +190,7 @@ class CourseNotebook:
             notebook : nbformat.NotebookNode
                 the notebook with the header cell inserted as first cell
         """
-        #raise NotImplementedError("CourseNotebook _add_header is implemented in subclasses.")
+        raise NotImplementedError("CourseNotebook _add_header is implemented in subclasses.")
         if(is_dbc):
             try:
                 if (self.examHeader != ''):

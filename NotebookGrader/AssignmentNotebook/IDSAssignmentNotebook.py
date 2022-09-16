@@ -308,6 +308,40 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             returnNB.assignments = []
             return returnNB #return empty assignment notebook
     
+    def _add_header(self, notebook,is_dbc=False):
+        #TODO: if we change LectureNotebook inherticance to DB/IDSCourseNotebook instead of AssignmentNotebook, we can move this to individual classes.
+        """
+            Inserts this objects header as the first cell in the notebook
+
+            Parameters
+            ----------
+            notebook : nbformat.NotebookNode
+                The notebook you wish to modify
+
+            Returns
+            -------
+            notebook : nbformat.NotebookNode
+                the notebook with the header cell inserted as first cell
+        """
+        try:
+            if (self.examHeader != ''):
+                newCell = nbformat.v4.new_markdown_cell(self.examHeader)
+                newCell['metadata']['deletable']=False
+                notebook['cells'].insert(0,newCell)
+
+                newCell = nbformat.v4.new_code_cell('''# Enter your anonymous exam id by replacing XXXX in this cell below
+    # do NOT delete this cell
+    MyAnonymousExamID = "XXXX"''')
+                newCell['metadata']['deletable']=False
+                notebook['cells'].insert(2,newCell)
+        except Exception as e:
+            pass
+        if (self.header != None):
+            newCell = nbformat.v4.new_markdown_cell(self.header)
+            newCell['metadata']['deletable']=False
+            notebook['cells'].insert(0,newCell)
+        return notebook
+
     def extractResult(self):
         """
         Extracts the results of a graded assignment notebook
@@ -389,7 +423,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             the ready made assignment Notebook.
         '''
         assignmentNotebook = nbformat.v4.new_notebook()
-
+        
         assignmentNotebook = self._add_course_metadata(assignmentNotebook,"metadata")
         assignmentNotebook = self._add_assignment_metadata(assignmentNotebook)
         assignmentNotebook = self._add_header(assignmentNotebook)

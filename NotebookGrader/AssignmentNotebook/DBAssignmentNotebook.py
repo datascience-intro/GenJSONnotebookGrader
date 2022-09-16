@@ -885,7 +885,238 @@ class DBAssignmentNotebook(AssignmentNotebook):
             returnNB.courseDetails = self.courseDetails
             returnNB.header = self.header
             return returnNB #return empty assignment notebook
-   
+    def _add_header(self,notebook,is_dbc=False):
+        #TODO: if we change LectureNotebook inherticance to DB/IDSCourseNotebook instead of AssignmentNotebook, we can move this to individual classes.
+        """
+            Inserts this objects header as the first cell in the notebook
+
+            Parameters
+            ----------
+            notebook : nbformat.NotebookNode
+                The notebook you wish to modify
+
+            Returns
+            -------
+            notebook : nbformat.NotebookNode
+                the notebook with the header cell inserted as first cell
+        """
+        if(is_dbc):
+            try:
+                if (self.examHeader != ''):
+                    newCell_str = '''{
+                        "version": "CommandV1",
+                        "origId": 2391963185141926,
+                        "guid": "f21055aa-ee56-4536-9eb6-d9752d5821b6",
+                        "subtype": "command",
+                        "commandType": "auto",
+                        "position": 0.01,
+                        "command": "",
+                        "commandVersion": 26,
+                        "state": "error",
+                        "results": null,
+                        "resultDbfsStatus": "INLINED_IN_TREE",
+                        "errorSummary": null,
+                        "errorTraceType": null,
+                        "error": null,
+                        "workflows": [],
+                        "startTime": 0,
+                        "submitTime": 0,
+                        "finishTime": 0,
+                        "collapsed": false,
+                        "bindings": {},
+                        "inputWidgets": {},
+                        "displayType": "table",
+                        "width": "auto",
+                        "height": "auto",
+                        "xColumns": null,
+                        "yColumns": null,
+                        "pivotColumns": null,
+                        "pivotAggregation": null,
+                        "useConsistentColors": false,
+                        "customPlotOptions": {},
+                        "commentThread": [],
+                        "commentsVisible": false,
+                        "parentHierarchy": [],
+                        "diffInserts": [],
+                        "diffDeletes": [],
+                        "globalVars": {},
+                        "latestUser": "a user",
+                        "latestUserId": null,
+                        "commandTitle": "",
+                        "showCommandTitle": false,
+                        "hideCommandCode": false,
+                        "hideCommandResult": false,
+                        "isLockedInExamMode": false,
+                        "iPythonMetadata": null,
+                        "metadata": {},
+                        "streamStates": {},
+                        "datasetPreviewNameToCmdIdMap": {},
+                        "tableResultIndex": null,
+                        "listResultMetadata": [],
+                        "subcommandOptions": null,
+                        "nuid": ""
+                    }'''
+
+                    newCell = json.loads(newCell_str)
+
+                    # newCell = nbformat.v4.new_markdown_cell(self.examHeader)
+                    newCell['command'] = self.examHeader
+                    newCell['metadata']['deletable']=False
+                    notebook['commands'].insert(0,newCell)
+
+                    # new cell >> anonymous exam id --------------------------------------------------------------------------------------
+                    #
+                    # newCell = nbformat.v4.new_code_cell('''# Enter your anonymous exam id by replacing XXXX in this cell below
+        # # do NOT delete this cell
+        # MyAnonymousExamID = "XXX"''')
+
+                    anonymous_cell_content_scala = '''%scala\n// Enter your anonymous exam id by replacing XXXX in this cell below\n// // do NOT delete this cell\n// MyAnonymousExamID = \\"XXXX\\"'''
+                    anonymous_cell_content_python = '''%python\n# Enter your anonymous exam id by replacing XXXX in this cell below\n# # do NOT delete this cell\n# MyAnonymousExamID = \\"XXXX\\"'''
+                    anonymous_cell_content_r = '''%r\n# Enter your anonymous exam id by replacing XXXX in this cell below\n# do NOT delete this cell\n# MyAnonymousExamID = \\"XXXX\\"'''
+
+                    file_extension = "scala"
+                    for filename in os.listdir(self.courseDetails['notebook_folder']):
+                        if len(filename.split(".")) == 2:
+                            if filename.split(".")[1] not in ["dbc"]:
+                                file_extension = filename.split(".")[1]
+                                break # get out of for-loop immediately when matched
+                    assignmentLanguage = file_extension
+
+                    anonymous_cell_content = anonymous_cell_content_scala
+                    if(assignmentLanguage == "scala"):
+                        anonymous_cell_content = anonymous_cell_content_scala
+                    elif(assignmentLanguage == "python"):
+                        anonymous_cell_content = anonymous_cell_content_python
+                    elif(assignmentLanguage == "r"):
+                        anonymous_cell_content = anonymous_cell_content_r
+
+                    newCell_0_str = '''{
+                        "version": "CommandV1",
+                        "origId": 3192287633905980,
+                        "guid": "9a83a60c-d993-4e52-9ff4-8188ef5d02f7",
+                        "subtype": "command",
+                        "commandType": "auto",
+                        "position": 1.5,
+                        "command": "'''
+                    newCell_1_str = anonymous_cell_content
+                    newCell_2_str = '''",
+                        "commandVersion": 19,
+                        "state": "error",
+                        "results": null,
+                        "resultDbfsStatus": "INLINED_IN_TREE",
+                        "errorSummary": null,
+                        "errorTraceType": null,
+                        "error": null,
+                        "workflows": [],
+                        "startTime": 0,
+                        "submitTime": 0,
+                        "finishTime": 0,
+                        "collapsed": false,
+                        "bindings": {},
+                        "inputWidgets": {},
+                        "displayType": "table",
+                        "width": "auto",
+                        "height": "auto",
+                        "xColumns": null,
+                        "yColumns": null,
+                        "pivotColumns": null,
+                        "pivotAggregation": null,
+                        "useConsistentColors": false,
+                        "customPlotOptions": {},
+                        "commentThread": [],
+                        "commentsVisible": false,
+                        "parentHierarchy": [],
+                        "diffInserts": [],
+                        "diffDeletes": [],
+                        "globalVars": {},
+                        "latestUser": "a user",
+                        "latestUserId": null,
+                        "commandTitle": "",
+                        "showCommandTitle": false,
+                        "hideCommandCode": false,
+                        "hideCommandResult": false,
+                        "isLockedInExamMode": false,
+                        "iPythonMetadata": null,
+                        "metadata": {},
+                        "streamStates": {},
+                        "datasetPreviewNameToCmdIdMap": {},
+                        "tableResultIndex": null,
+                        "listResultMetadata": null,
+                        "subcommandOptions": null,
+                        "nuid": ""
+                    }'''
+
+                    newCell_str = newCell_0_str + newCell_1_str + newCell_2_str
+                    newCell = json.loads(newCell_str)
+
+                    newCell['metadata']['deletable']=False
+                    notebook['commands'].insert(2,newCell)
+            except Exception as e:
+                pass
+    
+            if (self.header != None):
+                newCell_str = '''{
+                    "version": "CommandV1",
+                    "origId": 2391963185141926,
+                    "guid": "f21055aa-ee56-4536-9eb6-d9752d5821b6",
+                    "subtype": "command",
+                    "commandType": "auto",
+                    "position": -99999,
+                    "command": "",
+                    "commandVersion": 26,
+                    "state": "error",
+                    "results": null,
+                    "resultDbfsStatus": "INLINED_IN_TREE",
+                    "errorSummary": null,
+                    "errorTraceType": null,
+                    "error": null,
+                    "workflows": [],
+                    "startTime": 0,
+                    "submitTime": 0,
+                    "finishTime": 0,
+                    "collapsed": false,
+                    "bindings": {},
+                    "inputWidgets": {},
+                    "displayType": "table",
+                    "width": "auto",
+                    "height": "auto",
+                    "xColumns": null,
+                    "yColumns": null,
+                    "pivotColumns": null,
+                    "pivotAggregation": null,
+                    "useConsistentColors": false,
+                    "customPlotOptions": {},
+                    "commentThread": [],
+                    "commentsVisible": false,
+                    "parentHierarchy": [],
+                    "diffInserts": [],
+                    "diffDeletes": [],
+                    "globalVars": {},
+                    "latestUser": "a user",
+                    "latestUserId": null,
+                    "commandTitle": "",
+                    "showCommandTitle": false,
+                    "hideCommandCode": false,
+                    "hideCommandResult": false,
+                    "isLockedInExamMode": false,
+                    "iPythonMetadata": null,
+                    "metadata": {},
+                    "streamStates": {},
+                    "datasetPreviewNameToCmdIdMap": {},
+                    "tableResultIndex": null,
+                    "listResultMetadata": [],
+                    "subcommandOptions": null,
+                    "nuid": ""
+                }'''
+
+                newCell = json.loads(newCell_str)
+
+                #newCell = nbformat.v4.new_markdown_cell(self.header)
+                newCell['command'] = "%md\n"+self.header
+                newCell['metadata']['deletable']=False
+                notebook['commands'].insert(0,newCell)
+
+            return notebook
     def extractResult(self):
         """
         Extracts the results of a graded assignment notebook

@@ -40,6 +40,7 @@ def startCluster(api_client, cluster_id):
             continue
         print("Cluster started")
     print("===== Cluster is running =====")
+    
 
 def createAndRunJob(api_client, job_conf):
     jobs_api = JobsApi(api_client)
