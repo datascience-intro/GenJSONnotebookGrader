@@ -12,11 +12,11 @@ import sys
 import nbformat
 #from package.GradingModule import *
 from NotebookGrader import  *
-import os 
-from python_on_whales import docker 
+import os
+from python_on_whales import docker
 import json
-from zipfile import ZipFile 
-import re 
+from zipfile import ZipFile
+import re
 import subprocess
 
 unverified_context = ssl._create_unverified_context
@@ -115,7 +115,7 @@ class Autograder:
             return None
 
         return r.json()['id'] #<< file_id
- 
+
     def _uploadSubmissionGrade(self,submission,grade,comment): # >>>>>>>> nothing changed
         '''
             Uploads a grade and a comment for a submission up on the Studium website
@@ -222,7 +222,7 @@ class Autograder:
                             urllib.request.urlretrieve(attachments[0]['url'],studentSubmissionFileName) # << .dbc, .ipynb
 
                             masterNotebookFileName = self.master_nb_filename
-       
+
                             masterNotebookFileName,studentSubmissionFileName = self.extractStudentAndMasterFiles(studentSubmissionFileName,studentSubmissionFilePath,student_id,submission)
                             try:
                                 print("Grading nootebook!")
@@ -232,13 +232,13 @@ class Autograder:
                                     self.prepareNotebookForGrading(studentSubmissionFileName,masterNotebookFileName,student_id) # <<< .ipynb, .scala, .r, etc (not dbc)
                                 else:
                                     gradeDict = self.safeGradeNotebook(studentSubmissionFileName,masterNotebookFileName,student_id, assName = self.assignment.attributes['name']) # <<< .ipynb, .scala, .r, etc (not dbc)
-                                    
+
                                     grade = gradeDict['lx_problem_total_scored_points']
-                                    comment = gradeDict['text_response'].replace('#','') 
+                                    comment = gradeDict['text_response'].replace('#','')
                                     #writeResponseFile
                                     if (gradeDict['Response_Notebook'] != ''): #<< json dict << check if it is dbc (zip + remove) or ipynb
                                         self.writeResponseFile(gradeDict['Response_Notebook'],student_id,submission['attempt'],studentSubmissionFileName)
-                                
+
                                 print("Done grading")
                             except Exception as e:
                                 comment = str(e)
@@ -250,7 +250,7 @@ class Autograder:
 
         return grade, comment, update_grade
 
-    def getStudentSubmission(self,student_id):
+    def getStudentSubmission(self,student_id,student_name=None):
         '''
             Downloads the students submission into a locally stored notebook file
             Keyword arguments:
@@ -263,7 +263,10 @@ class Autograder:
         filtered_submissions = [submission for submission in self.submissions if submission['user_id'] == student_id]
         assert len(filtered_submissions) == 1, "Student does not exist"
         submission = filtered_submissions[0]
-        file_name = "StudentSubmission/"+str(student_id)+".ipynb"
+        if (type(student_name) == str):
+            file_name = "StudentSubmission/"+str(student_id)+"_"+student_name+".ipynb"
+        else:
+            file_name = "StudentSubmission/"+str(student_id)+".ipynb"
         attachments = submission['attachments']
         urllib.request.urlretrieve(attachments[0]['url'],file_name)
         return file_name
@@ -320,10 +323,10 @@ class Autograder:
         return [submission['user_id'] for submission in filtered_submissions]
 
     def addSummary(self,finalGradeDict,graded_ass_nb,graded_nb):
-        NotImplementedError("AutoGrader addSummary is implemented in subclasses.")   
+        NotImplementedError("AutoGrader addSummary is implemented in subclasses.")
 
 
-    def safeRunNotebook(self,notebook = None, assName=""): 
+    def safeRunNotebook(self,notebook = None, assName=""):
 
         '''
             Takes a notebook in string format and spins up a sandboxed docker image that will run the grading
@@ -335,23 +338,23 @@ class Autograder:
             Returns:
             result -- A result dict that contains the following keys:
                 stdout -- stdout
-                stderr -- stderr >> not supported by whales 
+                stderr -- stderr >> not supported by whales
                 exit_code -- exit code >> not supported by whales
                 duration -- the time in seconds this was run >> not supported by whales
                 timeout -- False or True if the notebook timed out
                 oom_killed -- False or True depending on if the notebook used all memory
-                unknown_error -- False or True, True if error is unknown, but not by oom or timeout 
+                unknown_error -- False or True, True if error is unknown, but not by oom or timeout
         '''
         raise NotImplementedError("safeRunNotebook is implemented in subclasses.")
 
-    def prepareNotebookForGrading(self,student_nb_filename,master_soln_nb_filename,student_id = 0):
+    def prepareNotebookForGrading(self,student_nb_filename,master_soln_nb_filename,student_id = 0,student_name = None):
         '''
             Takes a student notebook, inserts the tests from the master notebook.
             Stores the file locally named 'student_solution_with_tests' + str(student_id) + '.ipynb'
 
             Keyword arguments:
             student_nb_filename -- the filename of the student notebook << eg. "StudentSubmission/<Student_ID>_<attempt>.ipynb" .scala, .r, etc. but not .dbc ! If dbc, it has to be zipped !
-            master_soln_nb_filename -- the filename of the notebook that contains the tests << eg. "Master/Assignment_XXX_problem_TEST.ipynb" .scala, .r, etc. but not .dbc ! << If dbc, it has to be zipped ! << filename loaded from config.json 
+            master_soln_nb_filename -- the filename of the notebook that contains the tests << eg. "Master/Assignment_XXX_problem_TEST.ipynb" .scala, .r, etc. but not .dbc ! << If dbc, it has to be zipped ! << filename loaded from config.json
             student_id -- integer representing the student id
 
             Returns:
@@ -362,7 +365,10 @@ class Autograder:
         master_soln_nb = AssignmentNotebook.createAssignmentNotebook(nb_filename = master_soln_nb_filename,extension = master_soln_nb_filename.split(".")[-1]) # << IDSAss has supported .scala,.r,. ipynb, etc. << _gradeSubmission() that calls this method still needs modification to handle nb type (ipynb, dbc) << "Master/Assignment_XXX_problem_TEST.ipynb"
         student_solution_with_tests = student_nb + master_soln_nb # << object AssignmentNotebook (not IDSAssignmentNotebook !)
         file_extension = student_nb_filename.split(".")[-1] # ipynb, scala, r << not .dbc !!! << if dbc, it has to be zipped !
-        student_solution_with_tests.to_nb('SolutionWTest/student_solution_with_tests_'+ str(student_id) +"."+ file_extension) # << we will finally get a notebook as .ipynb or .dbc !
+        if (student_name != None):
+            student_solution_with_tests.to_nb('SolutionWTest/student_solution_with_tests_%s_%s.%s'% (str(student_id),student_name,file_extension)) # << we will finally get a notebook as .ipynb or .dbc !
+        else:
+            student_solution_with_tests.to_nb('SolutionWTest/student_solution_with_tests_'+ str(student_id) +"."+ file_extension) # << we will finally get a notebook as .ipynb or .dbc !
         return student_solution_with_tests # << object AssignmentNotebook (not IDSAssignmentNotebook !)
 
     def safeGradeNotebook(self,student_nb_filename,master_soln_nb_filename,student_id = 0,assName=""):
@@ -372,7 +378,7 @@ class Autograder:
 
             Keyword arguments:
             student_nb_filename -- the filename of the student notebook << eg. "StudentSubmission/<Student_ID>_<attempt>.ipynb" .scala, .r, etc. but not .dbc ! If dbc, it has to be zipped !
-            master_soln_nb_filename -- the filename of the notebook that contains the tests << eg. "Master/Assignment_XXX_problem_TEST.ipynb" .scala, .r, etc. but not .dbc ! << If dbc, it has to be zipped ! << filename loaded from config.json 
+            master_soln_nb_filename -- the filename of the notebook that contains the tests << eg. "Master/Assignment_XXX_problem_TEST.ipynb" .scala, .r, etc. but not .dbc ! << If dbc, it has to be zipped ! << filename loaded from config.json
             student_id -- integer representing the student id
 
             Returns:
@@ -391,12 +397,12 @@ class Autograder:
         print("Preparing notebook for grading")
         # student_withInjectedTESTs_nb has a type of AssignmentNotebook
         # both filename can only be ipynb or source file (.scala, .r, etc unzipped from dbc) << file handled from _gradeSubmission()
-        student_withInjectedTESTs_nb = self.prepareNotebookForGrading(student_nb_filename,master_soln_nb_filename,student_id) 
+        student_withInjectedTESTs_nb = self.prepareNotebookForGrading(student_nb_filename,master_soln_nb_filename,student_id)
         print("Done preparing notebook for grading")
 
         print("Writing student notebook with injected tests to variable")
         file_extension = student_nb_filename.split(".")[-1]
-        
+
         content = student_withInjectedTESTs_nb.nb_as_json(notebook_language = file_extension)
 
         print("Done writing student notebook with injected tests to variable")
@@ -413,7 +419,7 @@ class Autograder:
 
         try:
             print("Trying to read graded std_out from sandboxed environment")
-            
+
             #if file_extension != "ipynb": # scala, r, etc.
             graded_nb = self.StringToNotebook(result['stdout']) # load json string into json dict
 
@@ -434,8 +440,8 @@ class Autograder:
             finalGradeDict.update({'text_response': stdOutString}) # Done
             #we can add this in assignmentnotebook class probably
             finalGradeDict,final_graded_nb = self.addSummary(finalGradeDict,graded_ass_nb,graded_nb) # Done)
-            # cannot do the following in AssignmentNotebook/extractResult so do it here instead 
-            
+            # cannot do the following in AssignmentNotebook/extractResult so do it here instead
+
             # finalGradeDict.update({'Response_Notebook': graded_ass_nb.notebook}) # json dict << Done
         finalGradeDict.update({'Response_Notebook': final_graded_nb}) # json dict << Done
 
