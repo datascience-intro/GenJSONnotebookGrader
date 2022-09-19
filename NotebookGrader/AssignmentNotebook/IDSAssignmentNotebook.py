@@ -252,32 +252,32 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         notebook : AssignmentNotebook
             a notebook with the tests of assignmentNotebook added at the end
         """
-
         #Lets add the tests for this one to the end
         assert(self.courseDetails == assignmentNotebook.courseDetails), "Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks." #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
 
         # check if notebook is dbc or ipynb
         # >> In case 'if' below doesn't work, use these following two lines instead. Also remove assignmentsWithTest inside if and elif !
         assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]  #<< swtich0
         if "source" in assignmentsWithTest[0].TEST_Cells[0]: #<< Use this if the line below doesn't work  << swtich0
-            tests = []
+            assignments = self.assignments
+            numAssignments = len(assignmentNotebook.assignments)
 
             cumPointsInitializer = '''\ncumPoints=0; cumMaxPoints=0 # initialising the cummulative & cumMax points\n'''
             cumPointsCounter = ('''\ncumPoints=cumPoints+local_points\ncumMaxPoints=cumMaxPoints+maxPoints\n'''
                                 '''print("The number of points you have scored for this problem is "+str(local_points)+" out of "+str(maxPoints))\n''')
             cumThusFar = '''\nprint("The number of points you have accumulated thus far is   "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
 
+            assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]
             for index,assignment in enumerate(assignmentsWithTest):
-                testCells = assignment.TEST_Cells.copy() # [{...TEST Cell...}]
+                testCells = assignment.TEST_Cells.copy()
                 assert len(testCells) == 1, "There can be only one TEST cell!"
-
-                newCell = nbformat.v4.new_code_cell(testCells[0]['source']) #<<<<<<<<<
+                newCell = nbformat.v4.new_code_cell(testCells[0]['source'])
                 newCell['metadata'] = testCells[0]['metadata']
                 newCell['metadata']['lx_test_only'] = "True"
-
-                firstCellSource = newCell['source'] # = testCells[0]['source']
-                firstCellSource='''maxPoints={} # initialising the cumulative points\n'''.format(assignment.problem_points)+firstCellSource
-
+                firstCellSource = newCell['source']
+                firstCellSource='''maxPoints={} # initialising the cummulative points\n'''.format(assignment.problem_points)+firstCellSource
                 if (index == 0):
                     firstCellSource = firstCellSource+cumPointsInitializer+cumPointsCounter+cumThusFar
                 elif (index == len(assignmentsWithTest)-1):
@@ -289,15 +289,19 @@ class IDSAssignmentNotebook(AssignmentNotebook):
 
                 newCell['source'] = firstCellSource
                 testCells[0] = newCell
-                tests.append(Assignment(PROBLEM_Cells=[],
+                testAssignment = Assignment(PROBLEM_Cells=[],
                                         SOLUTION_Cells=[],
                                         Test_Cells=[],
                                         TEST_Cells=testCells,
-                                        problem_points = assignment.problem_points))
-
+                                        problem_points = assignment.problem_points)
+                test_problem_nr = testAssignment.getProblemNumber()
+                correct_problem_nr_assigment = [assignment for assignment in assignments if assignment.getProblemNumber() == test_problem_nr]
+                assert(len(correct_problem_nr_assigment) == 1), "There can only be one assignment with problem_nr: %s" % test_problem_nr
+                correct_problem_nr_assigment[0].TEST_Cells = testCells
+                #print(correct_problem_nr_assigment[0])
 
             returnNB = IDSAssignmentNotebook()
-            returnNB.assignments = self.assignments + tests
+            returnNB.assignments = assignments#+tests
             returnNB.courseDetails = self.courseDetails
             returnNB.assignmentNumber = self.assignmentNumber
             returnNB.header = self.header
