@@ -22,7 +22,7 @@ class IDSCourseNotebook(CourseNotebook):
         the raw notebook, if loaded from file
     nb_filename : str
         the filename of the raw notebook
-
+    
 
     self.meta = 'metadata'
     Methods
@@ -48,8 +48,8 @@ class IDSCourseNotebook(CourseNotebook):
         #     self.nb_filename = nb_filename
         #     self._parse_notebook()
         # else: self.notebook=None
-
-
+        
+       
 
     def _from_file(self,nb_filename=None):
         """
@@ -105,7 +105,7 @@ class IDSCourseNotebook(CourseNotebook):
             newCell['metadata']['deletable']=False
             notebook['cells'].insert(0,newCell)
         return notebook
-
+    
     def to_nb(self,target_filename,skipAssignments=False):
         '''
             Prepares a lecture worthy notebook and writes it to file
@@ -119,7 +119,7 @@ class IDSCourseNotebook(CourseNotebook):
         '''
         with open(target_filename,mode='w') as f:
             nbformat.write(self.toLectureNotebook(skipAssignments),f)
-
+    
 
     def _parse_notebook(self):
 
@@ -193,7 +193,7 @@ class IDSCourseNotebook(CourseNotebook):
 
         # now insert the md cells at the right places
         for iC in indicesToInsertCells:
-            self.notebook['cells'].insert(iC[0],iC[1])
+            self.notebook['cells'].insert(iC[0],iC[1]) 
 
 class IDSAssignmentNotebook(AssignmentNotebook):
     """
@@ -213,11 +213,9 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         if (nb_filename != None): # called from AutoGrader.py > prepareNotebookForGrading
             self.notebook = self._load_notebook(nb_filename) #<< Done
             self.courseDetails, self.assignmentNumber = self._extractCourseDetails(self.notebook) #<< Done
-            #print(self.courseDetails)
-            #print(IDSCourseDetails())
             assert self.courseDetails == IDSCourseDetails() # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
             self.header = self._extractHeader(self.notebook) #<< Done
-            self.assignments = self._extractProblems(self.notebook) #<< Done
+            self.assignments = self._extractProblems(self.notebook) #<< Done 
         elif courseNotebooks != None:
             self.courseDetails = IDSCourseDetails()
             self.assignmentNumber = assignmentNumber
@@ -236,7 +234,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.assignments = None
             self.assignmentNumber = None
             self.courseNotebooks = None
-
+ 
 
     def __add__(self,assignmentNotebook):
         """
@@ -252,32 +250,32 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         notebook : AssignmentNotebook
             a notebook with the tests of assignmentNotebook added at the end
         """
+
         #Lets add the tests for this one to the end
         assert(self.courseDetails == assignmentNotebook.courseDetails), "Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks." #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
 
         # check if notebook is dbc or ipynb
         # >> In case 'if' below doesn't work, use these following two lines instead. Also remove assignmentsWithTest inside if and elif !
         assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]  #<< swtich0
         if "source" in assignmentsWithTest[0].TEST_Cells[0]: #<< Use this if the line below doesn't work  << swtich0
-            assignments = self.assignments
-            numAssignments = len(assignmentNotebook.assignments)
+            tests = []
 
             cumPointsInitializer = '''\ncumPoints=0; cumMaxPoints=0 # initialising the cummulative & cumMax points\n'''
             cumPointsCounter = ('''\ncumPoints=cumPoints+local_points\ncumMaxPoints=cumMaxPoints+maxPoints\n'''
                                 '''print("The number of points you have scored for this problem is "+str(local_points)+" out of "+str(maxPoints))\n''')
             cumThusFar = '''\nprint("The number of points you have accumulated thus far is   "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
 
-            assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]
             for index,assignment in enumerate(assignmentsWithTest):
-                testCells = assignment.TEST_Cells.copy()
+                testCells = assignment.TEST_Cells.copy() # [{...TEST Cell...}]
                 assert len(testCells) == 1, "There can be only one TEST cell!"
-                newCell = nbformat.v4.new_code_cell(testCells[0]['source'])
+
+                newCell = nbformat.v4.new_code_cell(testCells[0]['source']) #<<<<<<<<<
                 newCell['metadata'] = testCells[0]['metadata']
                 newCell['metadata']['lx_test_only'] = "True"
-                firstCellSource = newCell['source']
-                firstCellSource='''maxPoints={} # initialising the cummulative points\n'''.format(assignment.problem_points)+firstCellSource
+
+                firstCellSource = newCell['source'] # = testCells[0]['source']
+                firstCellSource='''maxPoints={} # initialising the cumulative points\n'''.format(assignment.problem_points)+firstCellSource
+
                 if (index == 0):
                     firstCellSource = firstCellSource+cumPointsInitializer+cumPointsCounter+cumThusFar
                 elif (index == len(assignmentsWithTest)-1):
@@ -289,31 +287,27 @@ class IDSAssignmentNotebook(AssignmentNotebook):
 
                 newCell['source'] = firstCellSource
                 testCells[0] = newCell
-                testAssignment = Assignment(PROBLEM_Cells=[],
+                tests.append(Assignment(PROBLEM_Cells=[],
                                         SOLUTION_Cells=[],
                                         Test_Cells=[],
                                         TEST_Cells=testCells,
-                                        problem_points = assignment.problem_points)
-                test_problem_nr = testAssignment.getProblemNumber()
-                correct_problem_nr_assigment = [assignment for assignment in assignments if assignment.getProblemNumber() == test_problem_nr]
-                assert(len(correct_problem_nr_assigment) == 1), "There can only be one assignment with problem_nr: %s" % test_problem_nr
-                correct_problem_nr_assigment[0].TEST_Cells = testCells
-                #print(correct_problem_nr_assigment[0])
+                                        problem_points = assignment.problem_points))
 
+            
             returnNB = IDSAssignmentNotebook()
-            returnNB.assignments = assignments#+tests
+            returnNB.assignments = self.assignments + tests
             returnNB.courseDetails = self.courseDetails
             returnNB.assignmentNumber = self.assignmentNumber
             returnNB.header = self.header
             return returnNB
-
+        
         # ---
         else:
             print("Notebook type not supported.")
             returnNB = AssignmentNotebook()
             returnNB.assignments = []
             return returnNB #return empty assignment notebook
-
+    
     def extractResult(self):
         """
         Extracts the results of a graded assignment notebook
@@ -347,7 +341,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                         matchObj = re.match(r"^.*((?://|#)\s+ASSIGNMENT\s+\d+,\s+TEST\s+\d+,\s+Points\s+\d+).*$", C['source'], flags=re.M | re.DOTALL | re.UNICODE | re.I)
                         if matchObj:
                             C['source'] = matchObj.group(1)
-
+                        
                         metadata = C['metadata']
                         md='''##TESTs for Problem {} of {} {} were run and their results are as follows:\n'''.format(metadata['lx_problem_number'],
                         metadata['lx_assignment_type'],metadata['lx_assignment_number'])
@@ -365,8 +359,8 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 else:
                     print("Notebook type not supported.")
 
-
-
+        
+   
         return finalGradesDict, stdOutString
 
     def getPlatformCellName(self,notebook):
@@ -374,7 +368,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         return the platform specific names for the list of cells and the individual cells
         """
         return 'cells','source'
-
+    
     def to_notebook(self,notebook_type='problem_solution_TEST',notebook_language=""):
         '''
         Creates a notebook
@@ -387,7 +381,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             "problem" includes the problem and self test.
             "solution" only includes the solution.
             "TEST" includes the final test of the problem
-
+        
 
         Returns
         -------
@@ -399,7 +393,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         assignmentNotebook = self._add_course_metadata(assignmentNotebook,"metadata")
         assignmentNotebook = self._add_assignment_metadata(assignmentNotebook)
         assignmentNotebook = self._add_header(assignmentNotebook)
-
+          
         for assignment in self.assignments:
             if ('problem' in notebook_type):
                 # Add problem + Test
@@ -411,11 +405,11 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             if ('TEST' in notebook_type):
                 # Add TEST cells
                 assignmentNotebook['cells'] += assignment.TEST_Cells
-
+        
         if notebook_type=='grading_problem_TEST':
-            AssignmentNotebook.injectTestCells(assignmentNotebook,'cells')
+            AssignmentNotebook.injectTestCells(assignmentNotebook,'cells')  
 
-
+        
         self.notebook = assignmentNotebook
         return self.notebook # as NotebookNode
 
@@ -424,7 +418,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         Creates a json representation of the notebook.
         '''
         return nbformat.writes(self.to_notebook(notebook_language=notebook_language,notebook_type="grading_problem_TEST"))
-
+    
 class IDSExamNotebook(AssignmentNotebook):
     """
     Represents an assignmentNotebook for Introduction to Data Science (IDS)
@@ -684,8 +678,8 @@ class IDSLectureNotebook(IDSCourseNotebook):
             self.courseDetails['CourseInstance'],
             self.courseDetails['CourseInstance'])
         super().__init__(nb_filename=nb_filename, courseDetails=self.courseDetails, header=self.header)
-
-
+    
+    
 class IDSBookNotebook(CourseNotebook):
     def __init__(self,nb_filename=None):
         super().__init__(nb_filename)
@@ -741,7 +735,7 @@ class IDSCourse():
         print("load Jupyter master notebooks")
         for nb_name in self.courseDetails['master_notebooks']: #nb_name = 00, 01, 02, ...
             notebooks[nb_name]=IDSLectureNotebook(self.courseDetails['notebook_folder']+"/" + nb_name + ".ipynb")
-
+            
 
         return notebooks
 
@@ -766,7 +760,7 @@ class IDSCourse():
         for nb_name in self.lectureNotebooks:
             notebook = self.lectureNotebooks[nb_name]
             notebook.to_nb(target_path+'/' + nb_name + '.ipynb',skipAssignments=True)
-
+    
 
 
 class IDSBook():
