@@ -1029,9 +1029,6 @@ class DBAssignmentNotebook(AssignmentNotebook):
                 assignmentNotebook['commands'] += assignment.PROBLEM_Cells # append all items (cell dict) in a list to the other list
                 assignmentNotebook['commands'] += assignment.Test_Cells
             if ('solution' in notebook_type):
-                # Add solution
-                #if "problem" not in notebook_type:
-                #    assignmentNotebook['commands'] += assignment.Test_Cells # so that TEST_cells can be injected properly
                 assignmentNotebook['commands'] += assignment.SOLUTION_Cells
             if ('TEST' in notebook_type):
                 # Add TEST cells

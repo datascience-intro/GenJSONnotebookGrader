@@ -574,11 +574,12 @@ class AssignmentNotebook(CourseNotebook):
                 except Exception as e:
                      pass
             last = i
-        #disgusting temporary loop:
-        #do this in the beginning of the function
-        notebook[cells] = []
-        for cell in new_commands:
-            notebook[cells] += [cell]
+
+
+        notebook[cells] = new_commands
+        #notebook[cells] = []
+        #for cell in new_commands:
+        #    notebook[cells] += [cell]
         return notebook
 
     def to_nb(self, target_filename,notebook_type='problem_solution_TEST'):
