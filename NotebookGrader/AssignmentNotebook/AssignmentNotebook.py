@@ -563,16 +563,19 @@ class AssignmentNotebook(CourseNotebook):
                 new_commands += [i]
             elif i['metadata']['lx_problem_cell_type'] == 'PROBLEM':
                 new_commands += [i]
-            elif i['metadata']['lx_problem_cell_type'] == 'Test':
-                new_commands += [i]
+            elif i['metadata']['lx_problem_cell_type'] == 'Test' or i['metadata']['lx_problem_cell_type'] == 'SOLUTION':
+                new_commands += [i]              
                 try:
-                    if i['metadata']['lx_problem_cell_type'] == 'Test' and last['metadata']['lx_problem_cell_type'] == 'Test':
+                    if (i['metadata']['lx_problem_cell_type'] == 'Test' and last['metadata']['lx_problem_cell_type'] == 'Test') or (i['metadata']['lx_problem_cell_type'] == 'SOLUTION' and new_commands[-2]['metadata']['lx_problem_cell_type'] == 'SOLUTION'):
+                        #We have to look and new_commands[-2] instead of "last" because "last" will always be a solution cell in the case of submitting an Assignment_solution notebook
+                        #we want support for this so that it is possible to submit it as the "model" student.
                         new_commands += [TEST_cells[counter]]
                         counter += 1
                 except Exception as e:
-                    pass
+                     pass
             last = i
         #disgusting temporary loop:
+        #do this in the beginning of the function
         notebook[cells] = []
         for cell in new_commands:
             notebook[cells] += [cell]

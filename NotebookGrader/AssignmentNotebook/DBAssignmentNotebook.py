@@ -105,7 +105,7 @@ class DBCourseNotebook(CourseNotebook):
 
             # remove source file and manifest.mf we got from the zip extraction
             os.remove(os.path.join(file_path, source_file_name)) 
-            os.remove(os.path.join(file_path, "manifest.mf"))
+            #os.remove(os.path.join(file_path, "manifest.mf"))
     
 
         return nb
@@ -1030,13 +1030,15 @@ class DBAssignmentNotebook(AssignmentNotebook):
                 assignmentNotebook['commands'] += assignment.Test_Cells
             if ('solution' in notebook_type):
                 # Add solution
+                #if "problem" not in notebook_type:
+                #    assignmentNotebook['commands'] += assignment.Test_Cells # so that TEST_cells can be injected properly
                 assignmentNotebook['commands'] += assignment.SOLUTION_Cells
             if ('TEST' in notebook_type):
                 # Add TEST cells
                 assignmentNotebook['commands'] += assignment.TEST_Cells
 
         # renumber position of cells in commands in assignmentNotebook
-        if notebook_type=='grading_problem_TEST':
+        if notebook_type=='grading_problem_solution_TEST':
             AssignmentNotebook.injectTestCells(assignmentNotebook,'commands')     
 
         new_index = 0
@@ -1052,7 +1054,7 @@ class DBAssignmentNotebook(AssignmentNotebook):
         '''
         Creates a json string of the notebook.
         '''
-        return self.to_notebook(notebook_language=notebook_language,notebook_type="grading_problem_TEST")
+        return self.to_notebook(notebook_language=notebook_language,notebook_type="grading_problem_solution_TEST")
 
 
 class DBCourseDetails(CourseDetails):

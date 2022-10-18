@@ -232,8 +232,9 @@ class DBAutoGrader(Autograder):
             workspace = WorkspaceApi(api_client)
             try:
                 workspace.delete(dbc_grading_dir,True)
-            except OSError as e:
-                print(e)
+            except:
+                #we dont need to handle this expection anymore because it only means the directory does not exist.
+                pass
 
             #create new folders
 
