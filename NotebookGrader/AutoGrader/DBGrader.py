@@ -94,6 +94,7 @@ class DBAutoGrader(Autograder):
         master_nb_only_file_name = self.master_nb_filename.split("/")[-1].split(".")[0] # only file name, wo ext
         with ZipFile(self.master_nb_filename, 'r') as zipObj: #<< full path including file name
             # Extract all the contents of zip file
+            
             zipObj.extractall(master_nb_file_path) #<< path to dir that stores the file, w/o file name
             # Get the extension of the source file inside .dbc << it can be .scala, .r, etc.
             source_file_name = [file_name for file_name in zipObj.namelist() if file_name.split(".")[-1] != "mf"][0] # only file name, w/o path
@@ -305,6 +306,6 @@ class DBAutoGrader(Autograder):
             os.remove("run_res.txt")
             return result
             
-            
+        print("safeRunNotebook in DBGrader did not run because no notebook could be found. Check if the config files are setup properly.")    
         return None
 
