@@ -14,15 +14,12 @@ import time
 
 from zipfile import ZipFile
 
-def upload_generated_assignments(config=None,assignment_name=None):
+def upload_generated_assignments(grader_conf,assignment_name=None):
     api_client = ApiClient(
                 host  = get_config().host,
                 token = get_config().token
                 )
     print(api_client)
-
-    with open("../configGrader.json", mode="r") as f:
-        grader_conf = json.load(f)
         
 
     workspace = WorkspaceApi(api_client)
@@ -30,8 +27,8 @@ def upload_generated_assignments(config=None,assignment_name=None):
     
     workspace_assignment_path = grader_conf["dbc_workspace_dir"] + "/" + assignment_name + "/AutoGrader generated assignments"
     workspace.mkdirs(workspace_assignment_path)
-    
-    names = os.listdir("./generated_assignments")
+    print(os.listdir(os.getcwd()))
+    names = os.listdir("courseLink/GenerateMaterial/generated_assignments")
     #names = [name if os.listdir("./generated_assignments")
     local_assignment_name = grader_conf["Assignments"][0]["master_filename"]
     #oh lord
@@ -51,28 +48,30 @@ def upload_notebook(filename,assName,workspace,workspace_path):
     except:
         #already exists
         pass
-    workspace.import_workspace("./generated_assignments/"+filename,workspace_path + "/" + filename.split(".")[0] ,"DBC","DBC",is_overwrite=False)
+    workspace.import_workspace("courseLink/GenerateMaterial/generated_assignments/"+filename,workspace_path + "/" + filename.split(".")[0] ,"DBC","DBC",is_overwrite=False)
 
     print("upload notebook " + filename + " to workspace")
 
-def download_master(assignment_name=None,conf=None):
+def download_master(grader_conf,notebook_conf):
     api_client = ApiClient(
                 host  = get_config().host,
                 token = get_config().token
                 )
 
     
-    with open("../configGrader.json", mode="r") as f:
-        grader_conf = json.load(f)
-    with open("../configNotebooks.json", mode="r") as f:
-        notebook_conf = json.load(f)
+    #with open("../configGrader.json", mode="r") as f:
+    #    grader_conf = json.load(f)
+    #with open("../configNotebooks.json", mode="r") as f:
+    #    notebook_conf = json.load(f)
+    
     assName = grader_conf["Assignments"][0]["name"]
     
     
     workspace = WorkspaceApi(api_client)
-    master_filename = notebook_conf["master_notebooks"][0].split(".")[0] #temporary solution
-    workspace_master_path = grader_conf["dbc_workspace_dir"] + "/" + assName + "/" + master_filename
-    workspace.export_workspace(workspace_master_path,"templink/" + master_filename + ".dbc","DBC","DBC")
+    #master_filename = notebook_conf["master_notebooks"][0].split(".")[0] #temporary solution
+    workspace_master_path = grader_conf["dbc_workspace_dir"] + "/" + assName + "/" + notebook_conf["master_notebooks"][0]
+    print(os.getcwd())
+    workspace.export_workspace(workspace_master_path,notebook_conf["notebook_folder"] + "/" + notebook_conf["master_notebooks"][0] + ".dbc","DBC","DBC")
     print("downloaded notebook" + workspace_master_path + "from workspace")
     
     
