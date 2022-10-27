@@ -604,6 +604,7 @@ class AssignmentNotebook(CourseNotebook):
             assignmentNotebook = self.to_notebook(notebook_type=notebook_type,notebook_language=source_file_extension) # get a notebook (dict) with cells that belong to a specific type
 
             # write as source file (.scala, .py, etc)
+            print("Writing source file: " + target_filename)
             with open(target_filename, mode='w') as f:
                 # nbformat.write(assignmentNotebook,f)
                 json.dump(assignmentNotebook, f)

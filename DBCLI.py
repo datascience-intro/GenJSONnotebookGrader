@@ -12,7 +12,7 @@ with open("configNotebooks.json", "r") as f:
 with open("users.json", "r") as f:
     user_dict = json.load(f)
 
-# Is this correct course class? No, it does not have any way to create assignments
+
 download_master(conf,notebook_conf)
 course = DBCourse()
 
