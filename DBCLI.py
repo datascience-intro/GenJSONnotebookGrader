@@ -12,10 +12,6 @@ with open("configNotebooks.json", "r") as f:
 with open("users.json", "r") as f:
     user_dict = json.load(f)
 
-# Is this correct course class? No, it does not have any way to create assignments
-course = DBCourse()
-
-
 def clear():
     os.system('cls||clear')
 
@@ -38,10 +34,11 @@ def menu_generate():
     menu_entry_index = terminal_menu.show()
     if (menu_entry_index == 0):
         download_master(conf,notebook_conf)
+        course = DBCourse()
         course.makeAssignmentNotebook(assignment_number = 1,notebook_type='problem') 
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='solution') 
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='problem_TEST')
-        upload_generated_assignments(conf,notebook_conf) 
+        #upload_generated_assignments(conf,notebook_conf) 
     if (menu_entry_index == 1):
         course.makeAssignmentNotebook(assignment_number = 1,notebook_type='problem') 
     if (menu_entry_index == 2):
