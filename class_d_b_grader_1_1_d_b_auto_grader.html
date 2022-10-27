@@ -111,12 +111,7 @@ def&#160;</td><td class="memItemRight" valign="bottom"><b>StringToNotebook</b> (
 <tr class="memitem:a4ed86e2a7f626f1f4982a2c06086ddf8"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_d_b_grader_1_1_d_b_auto_grader.html#a4ed86e2a7f626f1f4982a2c06086ddf8">addSummary</a> (self, finalGradeDict, graded_ass_nb, graded_nb)</td></tr>
 <tr class="separator:a4ed86e2a7f626f1f4982a2c06086ddf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a0611cd88527020f339160c41f6c8b572"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_d_b_grader_1_1_d_b_auto_grader.html#a0611cd88527020f339160c41f6c8b572">safeRunNotebook</a> (self, notebook=None, assName=&quot;&quot;)</td></tr>
-<tr class="memdesc:a0611cd88527020f339160c41f6c8b572"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes a notebook in string format and spins up a sandboxed docker image that will run the grading </p><blockquote class="doxtable">
-<blockquote class="doxtable">
-<p >&zwj;notebook as JSON string (s: unicode). </p>
-</blockquote>
-</blockquote>
- <a href="class_d_b_grader_1_1_d_b_auto_grader.html#a0611cd88527020f339160c41f6c8b572">More...</a><br /></td></tr>
+<tr class="memdesc:a0611cd88527020f339160c41f6c8b572"><td class="mdescLeft">&#160;</td><td class="mdescRight">Takes a notebook in JSON-string format, writes it to source file(scala, py), zips it to .dbc and upload to databricks for grading.  <a href="class_d_b_grader_1_1_d_b_auto_grader.html#a0611cd88527020f339160c41f6c8b572">More...</a><br /></td></tr>
 <tr class="separator:a0611cd88527020f339160c41f6c8b572"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_class_auto_grader_1_1_autograder"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_class_auto_grader_1_1_autograder')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="class_auto_grader_1_1_autograder.html">AutoGrader.Autograder</a></td></tr>
 <tr class="memitem:a929be4fc0ebf898817cef548a79aa61b inherit pub_methods_class_auto_grader_1_1_autograder"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_auto_grader_1_1_autograder.html#a929be4fc0ebf898817cef548a79aa61b">__init__</a> (self, course, assignment, master_nb_filename, sharp=False)</td></tr>
@@ -326,14 +321,8 @@ def&#160;</td><td class="memItemRight" valign="bottom"><b>makeAutoGrader</b> (co
       </table>
 </div><div class="memdoc">
 
-<p>Takes a notebook in string format and spins up a sandboxed docker image that will run the grading </p><blockquote class="doxtable">
-<blockquote class="doxtable">
-<p >&zwj;notebook as JSON string (s: unicode). </p>
-</blockquote>
-</blockquote>
-</p>
-<p >Use "reads" to convert it to NotebookNode, and use "write" to save NotebookNode as .ipynb file </p>
-<p >Keyword arguments: notebook &ndash; a jupyter notebook loaded as string, using for instance nbformat.writes</p>
+<p>Takes a notebook in JSON-string format, writes it to source file(scala, py), zips it to .dbc and upload to databricks for grading. </p>
+<p >Keyword arguments: notebook &ndash; a dbc notebook loaded as string</p>
 <p >Returns: result &ndash; A result dict that contains the following keys: stdout &ndash; stdout stderr &ndash; stderr &gt;&gt; not supported by whales exit_code &ndash; exit code &gt;&gt; not supported by whales duration &ndash; the time in seconds this was run &gt;&gt; not supported by whales timeout &ndash; False or True if the notebook timed out oom_killed &ndash; False or True depending on if the notebook used all memory unknown_error &ndash; False or True, True if error is unknown, but not by oom or timeout </p>
 
 <p>Reimplemented from <a class="el" href="class_auto_grader_1_1_autograder.html#aa86da08e5ab34686682ea1d022173441">AutoGrader.Autograder</a>.</p>
