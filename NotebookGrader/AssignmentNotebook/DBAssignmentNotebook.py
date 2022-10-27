@@ -62,7 +62,7 @@ class DBCourseNotebook(CourseNotebook):
         nb_filename : str
             the filename of the raw notebook to init from
             << This is actually a full path of the file
-            << Typcially, master/jp/xxx.ipynb, master/dbc/xxx.dbc 
+            << Typcially, master/dbc/xxx.dbc 
 
         Returns
         -------
@@ -80,7 +80,8 @@ class DBCourseNotebook(CourseNotebook):
         print("load dbc, and unzip file")
 
         file_path = self.courseDetails['notebook_folder'] # master/dbc
-        
+        print(file_path)
+        print(os.getcwd())
         with ZipFile(nb_filename, 'r') as zipObj:
         # with ZipFile(nb_filename, 'r') as zipObj: # nb_filename is a full path to .dbc file ! not just a file name !
             # Unzip .dbc into the same directory, yielding a file in .scala, .py, etc., in which the content is in a json format !
@@ -578,7 +579,7 @@ class DBCourseNotebook(CourseNotebook):
 
 class DBAssignmentNotebook(AssignmentNotebook):
     """
-    Represents an assignmentNotebook for Introduction to Data Science (IDS)
+    Represents an assignmentNotebook in Databricks format
     Extends on AssignmentNotebook but has some extra bells and whistles.
 
     * The difference being that you can initialize empy
@@ -641,7 +642,7 @@ class DBAssignmentNotebook(AssignmentNotebook):
         #Lets add the tests for this one to the end
         assert(self.courseDetails == assignmentNotebook.courseDetails), "Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks." #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-        # check if notebook is dbc or ipynb
+        
         # >> In case 'if' below doesn't work, use these following two lines instead. Also remove assignmentsWithTest inside if and elif !
         assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]  #<< swtich0
         if "command" in assignmentsWithTest[0].TEST_Cells[0]:  #<< swtich0
@@ -929,11 +930,11 @@ class DBAssignmentNotebook(AssignmentNotebook):
                                 #has_result_s = True # there is output
                                 if matchObj:
                                     has_result_s = True # there is output
-                                    s=str(matchObj.group(1)) # e.g. >> x is incorrect !\nThe number of points you have scored for this problem is 1 out of 3\n\nmaxPoints: Int = 1 ...
+                                    s=str(matchObj.group(1)) + "\n\n" # e.g. >> x is incorrect !\nThe number of points you have scored for this problem is 1 out of 3\n\nmaxPoints: Int = 1 ...
 
                                     matchObj2 = re.match(r'^(.*The number of points you have scored for this problem is \d+ out of \d+).*$', s, flags=re.M | re.DOTALL | re.UNICODE)
                                     if matchObj2:
-                                        s=str(matchObj2.group(1))
+                                        s=str(matchObj2.group(1)) + "\n\n"
   
                     else:
                         s = "Command skipped, 0 out of "  + str(assignment.problem_points) + " were given."
@@ -1056,7 +1057,7 @@ class DBAssignmentNotebook(AssignmentNotebook):
 
 class DBCourseDetails(CourseDetails):
     """
-    The specific details regarding the Intro to Data Science.
+    The specific details regarding the Course.
     All the specifics are to be put inside the config.json inside the package
 
     What needs to be specified in the config.json are the following
@@ -1064,12 +1065,12 @@ class DBCourseDetails(CourseDetails):
       "master_notebooks":["00","01","02","03","04","05","06","07",
                           "08","09","10","11","12","13","14","15",
                           "16","17","18"],
-      "notebook_folder":"../master/jp",
+      "notebook_folder":"../master/db",
       "target_notebook_folder":"lectures",
       "target_notebook_book_folder":"book/Notebooks",
       "assignments":[1,2,3,4,5],
-      "CourseID":"1MS041",
-      "CourseName":"Introduction to Data Science: A Comp-Math-Stat Approach",
+      "CourseID":"12345",
+      "CourseName":"Course name",
       "CourseInstance":"2020"
     }
     """
@@ -1307,15 +1308,15 @@ class DBLectureNotebook(DBCourseNotebook):
 
 class DBCourse():
     """
-    Wrapper for the entire course. All details are in IDSCourseDetails.
+    Wrapper for the entire course. All details are in DBCourseDetails.
 
     Parameters
     ----------
-    courseDetails : IDSCourseDetails
-    lectureNotebooks : dict('notebook_filename' : IDSLectureNotebook)
-        a dictionary of key,value being notebook filename and an IDSLectureNotebook
-    assignments : dict('assignment number' : IDSAssignmentNotebook)
-        a dictionary of key,value being assingment number and IDSAssignmentNotebook
+    courseDetails : DBCourseDetails
+    lectureNotebooks : dict('notebook_filename' : DBLectureNotebook)
+        a dictionary of key,value being notebook filename and an DBLectureNotebook
+    assignments : dict('assignment number' : DBAssignmentNotebook)
+        a dictionary of key,value being assingment number and DBAssignmentNotebook
 
     Methods
     -------
@@ -1323,7 +1324,7 @@ class DBCourse():
         creates the AssignmentNotebook related to assignment_number of the specified
         notebook_type
     to_nb()
-        makes a lecture notebook out of all notebooks described in IDSCourseDetails.
+        makes a lecture notebook out of all notebooks described in DBCourseDetails.
     """
     def __init__(self):
         self.courseDetails = DBCourseDetails()
@@ -1354,8 +1355,8 @@ class DBCourse():
 
     def makeAssignmentNotebook(self,assignment_number,notebook_type='problem_solution_TEST'):
 
-        # self.assignments = {"1":"...IDSAssignmentNotebook Object...", "2":"...IDSAssignmentNotebook Object...", ...}
-        # assignment = IDSAssignmentNotebook Object
+        # self.assignments = {"1":"...DBAssignmentNotebook Object...", "2":"...DBAssignmentNotebook Object...", ...}
+        # assignment = DBAssignmentNotebook Object
         assignment = self.assignments[assignment_number] 
         target_path = self.courseDetails['target_notebook_folder'] # lectures
 
@@ -1373,7 +1374,7 @@ class DBCourse():
                 return None # return empty dict << may raise error at a later point
 
         # write with an original extension file first and zip it in .dbc ! <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        # type(assignment) = IDSAssignmentNotebook Object
+        # type(assignment) = DBAssignmentNotebook Object
         # to_nb in the following line is in AssignmentNotebook.py, class AssignmentNotebook
         assignment.to_nb(target_path+"/"+"Assignment_%d_%s.%s" % (assignment_number,notebook_type,file_extension),notebook_type) #<< call to_nb in AssignmentNotebook.py, in class AssignmentNotebook // not to_nb below !
 

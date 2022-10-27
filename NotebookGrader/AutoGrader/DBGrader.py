@@ -171,11 +171,10 @@ class DBAutoGrader(Autograder):
     def safeRunNotebook(self,notebook = None, assName=""):
 
         '''
-        Takes a notebook in string format and spins up a sandboxed docker image that will run the grading
-        >> notebook as JSON string (s: unicode). Use "reads" to convert it to NotebookNode, and use "write" to save NotebookNode as .ipynb file
+        Takes a notebook in JSON-string format, writes it to source file(scala, py), zips it to .dbc and upload to databricks for grading.
 
         Keyword arguments:
-        notebook -- a jupyter notebook loaded as string, using for instance nbformat.writes
+        notebook -- a dbc notebook loaded as string
 
         Returns:
         result -- A result dict that contains the following keys:
@@ -211,7 +210,7 @@ class DBAutoGrader(Autograder):
             source_file_extension = notebook['language']
 
             target_filename_source = current_dir+"/"+source_file_name+"."+source_file_extension 
-            #same but with dbc instead of sfe
+            
             target_filename_dbc = current_dir+"/"+source_file_name+".dbc"
             target_filename_html = current_dir+"/"+source_file_name+".html"
 

@@ -13,6 +13,7 @@ with open("users.json", "r") as f:
     user_dict = json.load(f)
 
 # Is this correct course class? No, it does not have any way to create assignments
+download_master(conf,notebook_conf)
 course = DBCourse()
 
 
@@ -41,7 +42,9 @@ def menu_generate():
         course.makeAssignmentNotebook(assignment_number = 1,notebook_type='problem') 
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='solution') 
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='problem_TEST')
-        upload_generated_assignments(conf,notebook_conf) 
+        input("Press Enter to continue...")
+        upload_generated_assignments(conf,notebook_conf)
+        input("Press Enter to continue...") 
     if (menu_entry_index == 1):
         course.makeAssignmentNotebook(assignment_number = 1,notebook_type='problem') 
     if (menu_entry_index == 2):
@@ -54,6 +57,10 @@ def menu_grade():
     options = [str(ass) for ass in course.assignments]
     terminal_menu = TerminalMenu(options)
     menu_entry_index = terminal_menu.show()
+    if (menu_entry_index == 0):
+        os.system("python3 Grader.py")
+
+
 
 
 def upload():

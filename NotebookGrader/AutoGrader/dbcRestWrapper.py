@@ -19,15 +19,12 @@ def upload_generated_assignments(grader_conf,assignment_name=None):
                 host  = get_config().host,
                 token = get_config().token
                 )
-    print(api_client)
         
-
     workspace = WorkspaceApi(api_client)
     assignment_name = "Test Final Assignment"
     
     workspace_assignment_path = grader_conf["dbc_workspace_dir"] + "/" + assignment_name + "/AutoGrader generated assignments"
     workspace.mkdirs(workspace_assignment_path)
-    print(os.listdir(os.getcwd()))
     names = os.listdir("courseLink/GenerateMaterial/generated_assignments")
     #names = [name if os.listdir("./generated_assignments")
     local_assignment_name = grader_conf["Assignments"][0]["master_filename"]
