@@ -23,7 +23,7 @@ def clear():
 def menu_main():
     clear()
     print("Welcome to the command line interface for managing the Course on Studium!")
-    options = ["Generate", "Grade", "Exit"]
+    options = ["generate", "grading", "exit"]
     terminal_menu = TerminalMenu(options)
     menu_entry_index = terminal_menu.show()
     if (menu_entry_index == 0):
@@ -34,7 +34,28 @@ def menu_main():
         menu_main()
 
 def menu_generate():
-    options = ["generate all", "problems", "solutions", "tests", "back"]
+    options = ["course notebooks", "assignment notebooks", "back"]
+    terminal_menu = TerminalMenu(options)
+    menu_entry_index = terminal_menu.show()
+    if (menu_entry_index == 0):
+        input("Code not integrated into CLI, press any key to go back")
+    if (menu_entry_index == 1):
+        menu_assignment_notebooks()
+
+def menu_assignment_notebooks():
+    options = ["assignment 1", "assignment 2", "assignment 3", "back"]
+    terminal_menu = TerminalMenu(options)
+    menu_entry_index = terminal_menu.show()
+    if (menu_entry_index == 0):
+        menu_choose_gen_type()
+    if (menu_entry_index == 1):
+        input("No assignment 2, press any key to go back")
+    if (menu_entry_index == 2):
+        input("No assignment 3, press any key to go back")
+
+
+def menu_choose_gen_type():
+    options = ["generate all", "problems", "solutions", "tests", "upload to dbc workspace", "back"]
     terminal_menu = TerminalMenu(options)
     menu_entry_index = terminal_menu.show()
     if (menu_entry_index == 0):
@@ -43,22 +64,28 @@ def menu_generate():
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='solution') 
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='problem_TEST')
         input("Press Enter to continue...")
-        upload_generated_assignments(conf,notebook_conf)
-        input("Press Enter to continue...") 
+        menu_choose_gen_type()
     if (menu_entry_index == 1):
         course.makeAssignmentNotebook(assignment_number = 1,notebook_type='problem') 
+        menu_choose_gen_type()
     if (menu_entry_index == 2):
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='solution') 
+        menu_choose_gen_type()
     if (menu_entry_index == 3):
         course.makeAssignmentNotebook(assignment_number = 1, notebook_type='problem_TEST') 
+        menu_choose_gen_type()
+    if (menu_entry_index == 4):
+        upload_generated_assignments(conf,notebook_conf)
+        input("Press Enter to continue...")
+        menu_choose_gen_type()
 
 
 def menu_grade():
-    options = [str(ass) for ass in course.assignments]
-    terminal_menu = TerminalMenu(options)
-    menu_entry_index = terminal_menu.show()
-    if (menu_entry_index == 0):
-        os.system("python3 Grader.py")
+    #options = [str(ass) for ass in course.assignments]
+    #terminal_menu = TerminalMenu(options)
+    #menu_entry_index = terminal_menu.show()
+    #if (menu_entry_index == 0):
+    os.system("python3 Grader.py")
 
 
 

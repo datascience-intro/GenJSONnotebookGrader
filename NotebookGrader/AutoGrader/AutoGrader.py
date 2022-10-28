@@ -90,9 +90,10 @@ class Autograder:
 
         import requests
         user_id = submission['user_id']
+        user_name = self.course.get_user(user_id)['name'].replace(" ","_")
         print("Uploading file for user_id: %d" % user_id)
-
-        #file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
+        
+        pure_file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
         file_extension="html"
         re_str = (self.course.base_req_str
             +  "/assignments/"+ str(self.assignment_id)
@@ -107,14 +108,21 @@ class Autograder:
         try:
             url = response.json()['upload_url']
             files = {'file': open('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension), 'rb')}
-
             r = requests.post(url, files=files)
 
             print(r.json()['upload_status'])
+            if self.sharp:
+
+                if pure_file_extension != "ipynb":
+                    
+                    from NotebookGrader import upload_feedback_to_workspace
+                    upload_feedback_to_workspace('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension),user_name,user_id,attemptnr)
+
         except Exception as e:
             print(e)
             return None
-
+        
+        
         return r.json()['id'] #<< file_id
 
     def _uploadSubmissionGrade(self,submission,grade,comment): # >>>>>>>> nothing changed

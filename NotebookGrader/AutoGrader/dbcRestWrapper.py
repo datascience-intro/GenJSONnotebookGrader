@@ -14,6 +14,16 @@ import time
 
 from zipfile import ZipFile
 
+with open("./configGrader.json", mode="r") as f:
+        grader_conf = json.load(f)
+with open("./configNotebooks.json", mode="r") as f:
+    notebook_conf = json.load(f)
+api_client = ApiClient(
+                host  = get_config().host,
+                token = get_config().token
+                )
+workspace = WorkspaceApi(api_client)
+
 def upload_generated_assignments(grader_conf,assignment_name=None):
     api_client = ApiClient(
                 host  = get_config().host,
@@ -72,6 +82,10 @@ def download_master(grader_conf,notebook_conf):
     print("downloaded notebook" + workspace_master_path + "from workspace")
     
     
+def upload_feedback_to_workspace(file,user_name,user_id,attemptnr):
+
+    #workspace.import_workspace(file,grader_conf["dbc_workspace_dir"] + "/" + grader_conf["Assignments"][0]["name"] + "/Grading_Archive/" + grader_conf["Assignments"][0]["name"] + "_" + + user_name + "_" + user_id + attemptnr,"DBC","DBC",is_overwrite=False)
+    pass
 
     
 def initConfigFiles(assName):
@@ -84,7 +98,7 @@ def initConfigFiles(assName):
         job_conf = json.load(f)
         job_conf["name"] = assName
         job_conf["existing_cluster_id"] = dbc_cluster_id
-        job_conf["notebook_task"]["notebook_path"] = grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Graded_Notebook_for_" + assName + ".dbc"
+        job_conf["notebook_task"]["notebook_path"] = grader_conf["dbc_workspace_dir"] + "/" + grader_conf["Assignments"][0]["name"] + "/Grading/Graded_Notebook_for_" + assName + ".dbc"
     return job_conf,grader_conf
 
 def startCluster(api_client, cluster_id):

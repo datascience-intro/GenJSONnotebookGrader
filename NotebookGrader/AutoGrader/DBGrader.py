@@ -142,7 +142,7 @@ class DBAutoGrader(Autograder):
                         s = cell['results']['data'] # text output
 
                         sSplitByNewLines = s.split('\n')
-                        ls = ''.join(sSplitByNewLines[0:]) # s --> ls (remove \n)
+                        ls = '\n'.join(sSplitByNewLines[0:]) # s --> ls (remove \n)
 
                         # for whatever lanaguage (scala, r, python, etc), the score summary in the last test cell must stricly be in this format !
                         matchObj = re.match(r"^.*points you have scored for this problem is\s+(\d+)\s+out of\s+(\d+).*$", ls, flags=re.M | re.DOTALL | re.UNICODE)
@@ -193,9 +193,10 @@ class DBAutoGrader(Autograder):
     
             #directories in you databricks workspace
             dbc_workspace_dir = grader_conf["dbc_workspace_dir"]
+            #dbc_assignment_dir = grader_conf["dbc_workspace_dir"]
             dbc_grading_dir = dbc_workspace_dir + "/Grading/" + assName 
-            dbc_HTML_dir = dbc_grading_dir + "/Graded_HTML"
-            dbc_GradedWoTest_dir = dbc_grading_dir + "/Graded_wo_TEST"
+            #dbc_HTML_dir = dbc_grading_dir + "/Graded_HTML"
+            #dbc_GradedWoTest_dir = dbc_grading_dir + "/Graded_wo_TEST"
 
                
             # directories on your local machine
@@ -230,65 +231,74 @@ class DBAutoGrader(Autograder):
                 token = get_config().token
                 )
             workspace = WorkspaceApi(api_client)
+            assignment_workspace_dir = grader_conf["dbc_workspace_dir"] + "/" + grader_conf["Assignments"][0]["name"]
+            dbc_grading_dir = assignment_workspace_dir + "/Grading"
+            dbc_HTML_dir = assignment_workspace_dir + "/Graded_HTML"
+            dbc_GradedWoTest_dir = dbc_grading_dir + "/Graded_wo_TEST"
             try:
+                print(dbc_grading_dir)
                 workspace.delete(dbc_grading_dir,True)
-            except:
+                
+                #"/Grading/" + assName 
+            except Exception as e:
+                print(e)
                 #we dont need to handle this expection anymore because it only means the directory does not exist.
                 pass
 
             #create new folders
 
-            workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName)
-            workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Graded_HTML")
-            workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Graded_wo_TEST")
-            workspace.mkdirs(grader_conf["dbc_workspace_dir"] + "/Grading/" + assName + "/Grading_Archive")
+            #hardcoded Assignments[0] for now
+            
+            dbc_grading_dir = assignment_workspace_dir + "/Grading"
+            dbc_HTML_dir = assignment_workspace_dir + "/Graded_HTML"
+            dbc_GradedWoTest_dir = dbc_grading_dir + "/Graded_wo_TEST"
+            workspace.mkdirs(assignment_workspace_dir + "/Grading/" )
+            workspace.mkdirs(assignment_workspace_dir + "/Grading/" + "Graded_HTML")
+            workspace.mkdirs(assignment_workspace_dir + "/Grading/" + "Graded_wo_TEST")
+            workspace.mkdirs(assignment_workspace_dir + "/Grading_Archive")
             
             try:
                 shutil.rmtree(f"./Grading/Graded/{assName}")
                 
-            except:
-                pass
+            except Exception as e:
+                print(e)
             os.makedirs(f"./Grading/Graded/{assName}/dbc_result_dir",exist_ok=True)
             os.makedirs(f"./Grading/Graded/{assName}/html_result_dir",exist_ok=True)
             startCluster(api_client,grader_conf['dbc_cluster_id'])
             
             #source_file_extension = "SCALA" #Notebook[language].toUpper()
-            target_path_dbc = job_conf["notebook_task"]["notebook_path"]
-
+            #target_path_dbc = job_conf["notebook_task"]["notebook_path"]
+            target_path_dbc = assignment_workspace_dir + "/Grading/Graded_Notebook_for_" + assName 
             source_path = "./Graded_Notebook_for_" + assName + ".dbc"
             
         
             workspace.import_workspace(source_path,target_path_dbc,source_file_extension.upper(),"DBC",False)
             
-            
+            job_conf["notebook_task"]["notebook_path"] = target_path_dbc
             id = createAndRunJob(api_client,job_conf)
-
-            with ZipFile(source_path, mode='r') as zipObj:
+            with ZipFile(source_path, mode='r') as zipObj:                
                 zipObj.extractall(os.getcwd())
                 source_file_name = [file_name for file_name in zipObj.namelist() if file_name.split(".")[-1] != "mf"][0]
+                
+
 
 
             
             
             host = get_config().host
-            print(host)
             req = requests.get(f"{host}/api/2.0/jobs/runs/export?run_id={id}")
-
             with open("run_res.txt",'w') as f:
                 f.write(json.dumps(req.json()))          
             extract_content("run_res.txt",result_dir_html)
-            
 
-            workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",dbc_HTML_dir + "/" + pure_name,source_file_extension,"HTML",False)
-            
+            workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",assignment_workspace_dir + "/Grading/" + "Graded_HTML/" + pure_name,source_file_extension,"HTML",False)
             #import to grading archive with student name + id
-            studentID = self.currentSubmission['user_id']
-            studentName = self.course.get_user(studentID)['name'].replace(" ","_")
-            workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",dbc_grading_dir + "/Grading_Archive/" + pure_name + "_" + studentName + "_" + str(studentID),source_file_extension,"HTML",False)
 
-            workspace.export_workspace(dbc_HTML_dir + "/" + pure_name , result_dir_dbc + "/" + pure_name,"DBC",True)
-            
-        
+            studentID = self.currentSubmission['user_id']
+            attempNr = self.currentSubmission['attempt']
+            studentName = self.course.get_user(studentID)['name'].replace(" ","_")
+            workspace.import_workspace(result_dir_html + "/" + pure_name + ".html",assignment_workspace_dir + "/Grading_Archive/" + assName + "_" + studentName + "_" + str(studentID) + "_" + str(attempNr),source_file_extension,"HTML",False)
+            workspace.export_workspace(assignment_workspace_dir + "/Grading/" + "Graded_HTML/" + pure_name,result_dir_dbc + "/" + pure_name,"DBC",True)
             with ZipFile(result_dir_dbc + "/" + pure_name, mode='r') as zipObj:
                 zipObj.extractall(result_dir_dbc)
             
