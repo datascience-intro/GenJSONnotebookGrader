@@ -142,7 +142,7 @@ class DBAutoGrader(Autograder):
                         s = cell['results']['data'] # text output
 
                         sSplitByNewLines = s.split('\n')
-                        ls = '\n'.join(sSplitByNewLines[0:]) # s --> ls (remove \n)
+                        ls = ''.join(sSplitByNewLines[0:]) # s --> ls (remove \n)
 
                         # for whatever lanaguage (scala, r, python, etc), the score summary in the last test cell must stricly be in this format !
                         matchObj = re.match(r"^.*points you have scored for this problem is\s+(\d+)\s+out of\s+(\d+).*$", ls, flags=re.M | re.DOTALL | re.UNICODE)
@@ -240,8 +240,7 @@ class DBAutoGrader(Autograder):
                 workspace.delete(dbc_grading_dir,True)
                 
                 #"/Grading/" + assName 
-            except Exception as e:
-                print(e)
+            except:
                 #we dont need to handle this expection anymore because it only means the directory does not exist.
                 pass
 
