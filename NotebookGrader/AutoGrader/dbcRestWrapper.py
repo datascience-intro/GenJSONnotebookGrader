@@ -39,11 +39,11 @@ def upload_generated_assignments(grader_conf,assignment_name=None):
     #names = [name if os.listdir("./generated_assignments")
     local_assignment_name = grader_conf["Assignments"][0]["master_filename"]
     #oh lord
-    assNumber = local_assignment_name.split(".")[0].split("/")[1].split("_")[1]
+    #assNumber = local_assignment_name.split(".")[0].split("/")[1].split("_")[1]
     #notebooks_to_upload = [name if "Assignment_" + assNumber in name for name in names]
     if names != []:
         for filename in names:
-            if "Assignment_" + assNumber + "_" in filename:
+            if "Assignment"  in filename:
             #if filename.split(".")[-1] == "dbc":
                 
                 upload_notebook(filename,assignment_name,workspace,workspace_assignment_path)
