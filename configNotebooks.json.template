@@ -1,8 +1,8 @@
 {
   "master_notebooks":["Example_databricks_1"],
   "notebook_file_extension":"db",
-  "notebook_folder":"master/db",
-  "target_notebook_folder":"lectures",
+  "notebook_folder":"GenerateMaterial/master/db",
+  "target_notebook_folder":"GenerateMaterial/generated_assignments",
   "target_notebook_book_folder":"Notebooks",
   "assignments":[1],
   "CourseID":"54514",
