@@ -18,11 +18,18 @@ with open("./configGrader.json", mode="r") as f:
         grader_conf = json.load(f)
 with open("./configNotebooks.json", mode="r") as f:
     notebook_conf = json.load(f)
-api_client = ApiClient(
-                host  = get_config().host,
-                token = get_config().token
-                )
-workspace = WorkspaceApi(api_client)
+
+try:
+    api_client = ApiClient(
+                    host  = get_config().host,
+                    token = get_config().token
+                    )
+    workspace = WorkspaceApi(api_client)
+except:
+    # TODO: handle exception
+    # TODO: This try except block was introduced to avoid the error when the databricks-cli is not configured
+    # TODO: and the user does not want to configure it. This is a temporary solution and should be handled properly
+    pass
 
 def upload_generated_assignments(grader_conf,assignment_name=None):
     api_client = ApiClient(

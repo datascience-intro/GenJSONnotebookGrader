@@ -1,6 +1,7 @@
 from CanvasInterface import Course
 import json
 from NotebookGrader import Autograder
+from NotebookGrader.AssignmentNotebook.IDSAssignmentNotebook import IDSCourse
 
 with open("configGrader.json","r") as f:
     conf = json.load(f)
@@ -28,6 +29,8 @@ def get_user(course,user_id):
 
 with open('users.json','r') as f:
     user_dict = json.load(f)
+    if (type(user_dict) != dict):
+        user_dict = {}
 
 def save_users():
     with open('users.json','w') as f:
@@ -53,16 +56,37 @@ def clear_downloads():
 def greet():
     clear()
     print("Welcome to the command line interface for managing the Course on Studium!")
-    options = ["List assignments","Clear Downloads","Exit"]
+    options = ["Generate Material and Assignments","List assignments","Clear Downloads","Exit"]
     terminal_menu = TerminalMenu(options)
     menu_entry_index = terminal_menu.show()
-    if (menu_entry_index == 0): # listAssignments
+    if (menu_entry_index == 0): # Generate Material and Assignments
+        menu_generate()
+        greet()
+    if (menu_entry_index == 1): # listAssignments
         listAssignments()
         greet()
-    if (menu_entry_index == 1): # Clear Downloads
+    if (menu_entry_index == 2): # Clear Downloads
         clear_downloads()
         pause()
         greet()
+
+def menu_generate():
+    options = ["Generate Material","Generate Assignments","Back"]
+    terminal_menu = TerminalMenu(options)
+    menu_entry_index = terminal_menu.show()
+    if (menu_entry_index == 0):
+        idsCourse = IDSCourse()
+        idsCourse.to_nb()
+        input("Material generated! Press Enter to continue.")
+    elif (menu_entry_index == 1):
+        idsCourse = IDSCourse()
+
+        idsCourse.makeAssignmentNotebooks(notebook_type='problem')
+        idsCourse.makeAssignmentNotebooks(notebook_type='problem_TEST')
+        idsCourse.makeAssignmentNotebooks(notebook_type='solution_TEST')
+        idsCourse.makeAssignmentNotebooks(notebook_type='problem_solution')
+        input("Material generated! Press Enter to continue.")
+
 
 def listAssignments():
     options = [ass.name() for ass in course.assignments]

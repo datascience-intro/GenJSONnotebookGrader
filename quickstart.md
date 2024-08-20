@@ -41,7 +41,7 @@ The NotebookGrader will use the following dependencies:
 
 `pip3 install python_on_whales`
 `pip3 install databricks-cli`
-`pip3 install simple_terminal_menu`
+`pip3 install simple_termin_menu`
 `pip3 install nbformat`
 
 ## 1. Create a Master notebook

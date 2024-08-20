@@ -215,7 +215,13 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.courseDetails, self.assignmentNumber = self._extractCourseDetails(self.notebook) #<< Done
             #print(self.courseDetails)
             #print(IDSCourseDetails())
-            assert self.courseDetails == IDSCourseDetails() # <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+            try:
+                assert self.courseDetails == IDSCourseDetails() 
+            except AssertionError:
+                print("Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks.")
+                print("courseDetails in AssignmentNotebook: ", self.courseDetails)
+                print("courseDetails in IDSCourseDetails: ", IDSCourseDetails())
+                raise AssertionError()
             self.header = self._extractHeader(self.notebook) #<< Done
             self.assignments = self._extractProblems(self.notebook) #<< Done
         elif courseNotebooks != None:
@@ -669,20 +675,29 @@ class IDSCourseDetails(CourseDetails):
             courseDetailsDict = json.load(f)
         super().__init__(courseDetailsDict)
 
-#class IDSLectureNotebook(CourseNotebook):
+#class IDSLectureNotebook(CourseNotebook): 
 class IDSLectureNotebook(IDSCourseNotebook):
     def __init__(self,nb_filename=None):
         self.courseDetails = IDSCourseDetails()
         self.metadataName = "metadata"
         self.cellName = "cells"
-        self.header = '''# {}, Year {} ({})\n### ScaDaMaLe Course [Site](https://lamastex.github.io/scalable-data-science/sds/3/x/) and [book](https://lamastex.github.io/ScaDaMaLe/index.html) \
-    \n{} Raazesh Sainudiin. [Attribution 4.0 International \
-    (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)''' \
+        self.header = '''# [{}](http://datascience-intro.github.io/1MS041-{}/)\
+    \n## {}, {} \n&copy;{} Raazesh Sainudiin, Benny Avelin. [Attribution 4.0 International \
+    (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)'''\
     .format(self.courseDetails['CourseName'],
             self.courseDetails['CourseInstance'],
             self.courseDetails['CourseID'],
             self.courseDetails['CourseInstance'],
             self.courseDetails['CourseInstance'])
+
+    #     self.header = '''# {}, Year {} ({})\n### ScaDaMaLe Course [Site](https://lamastex.github.io/scalable-data-science/sds/3/x/) and [book](https://lamastex.github.io/ScaDaMaLe/index.html) \
+    # \n{} Raazesh Sainudiin. [Attribution 4.0 International \
+    # (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)''' \
+    # .format(self.courseDetails['CourseName'],
+    #         self.courseDetails['CourseInstance'],
+    #         self.courseDetails['CourseID'],
+    #         self.courseDetails['CourseInstance'],
+    #         self.courseDetails['CourseInstance'])
         super().__init__(nb_filename=nb_filename, courseDetails=self.courseDetails, header=self.header)
 
 
@@ -752,20 +767,30 @@ class IDSCourse():
                                                                  assignmentNumber = assignment_number)
         return assignments
 
+    def makeAssignmentNotebooks(self,notebook_type='problem_solution_TEST'):
+        for assignment_number in self.courseDetails['assignments']:
+            self.makeAssignmentNotebook(assignment_number,notebook_type)
 
     def makeAssignmentNotebook(self,assignment_number,notebook_type='problem_solution_TEST'):
 
         assignment = self.assignments[assignment_number] # {"1":"...IDSAssignmentNotebook Object...", "2":"...IDSAssignmentNotebook Object...", ...}
-        target_path = self.courseDetails['target_notebook_folder'] # lectures
+        #target_path = self.courseDetails['target_notebook_folder'] # lectures
+        target_path = self.courseDetails['target_assignment_master_folder'] # assignments
         assignment.to_nb(target_path+"/"+"Assignment_%d_%s.ipynb" % (assignment_number,notebook_type),notebook_type)
 
 
     # Called from generate.py, line 12, course.to_nb()
     def to_nb(self):
         target_path = self.courseDetails['target_notebook_folder']
+        target_assignment_master_folder = self.courseDetails['target_assignment_master_folder']
         for nb_name in self.lectureNotebooks:
             notebook = self.lectureNotebooks[nb_name]
             notebook.to_nb(target_path+'/' + nb_name + '.ipynb',skipAssignments=True)
+        for ass_num in self.assignments: # TODO: This should be streamlined, as I am repeating myself
+            assignment = self.assignments[ass_num]
+            assignment.to_nb(target_path+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem')
+            assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem+solution+TEST')
+            assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d_solution.ipynb' % ass_num,notebook_type='problem+solution')
 
 
 

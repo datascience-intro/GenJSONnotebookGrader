@@ -1012,6 +1012,9 @@ class CourseDetails():
         return ((self.detailsDict['CourseID'] == x['CourseID']) and
                 (self.detailsDict['CourseName'] == x['CourseName']) and
                 (self.detailsDict['CourseInstance'] == x['CourseInstance']))
+    
+    def __str__(self) -> str:
+        return str(self.detailsDict)
 
 
     
