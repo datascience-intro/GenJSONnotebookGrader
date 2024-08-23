@@ -596,8 +596,6 @@ class AssignmentNotebook(CourseNotebook):
             "solution" only includes the solution.
             "TEST" includes the final test of the problem
         """
-        print("in super class")
-        return 0
         source_file_path = "/".join(target_filename.split("/")[0:-1]) # lectures
         source_file_name = target_filename.split("/")[-1].split(".")[0] # 00, 01, etc
         source_file_extension = target_filename.split(".")[-1] # py, scala, etc
