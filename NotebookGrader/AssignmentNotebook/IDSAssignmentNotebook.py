@@ -73,6 +73,7 @@ class IDSCourseNotebook(CourseNotebook):
         """
         with open(nb_filename,mode='r') as f:
             nb = nbformat.read(f,as_version=4)
+            nb = nbformat.validator.normalize(nb)[1]
         return nb
     def _add_header(self, notebook):
         """
@@ -98,12 +99,12 @@ class IDSCourseNotebook(CourseNotebook):
     MyAnonymousExamID = "XXXX"''')
                 newCell['metadata']['deletable']=False
                 notebook['cells'].insert(2,newCell)
+            elif (self.header != None):
+                newCell = nbformat.v4.new_markdown_cell(self.header)
+                newCell['metadata']['deletable']=False
+                notebook['cells'].insert(0,newCell)
         except Exception as e:
             pass
-        if (self.header != None):
-            newCell = nbformat.v4.new_markdown_cell(self.header)
-            newCell['metadata']['deletable']=False
-            notebook['cells'].insert(0,newCell)
         return notebook
 
     def to_nb(self,target_filename,skipAssignments=False):
@@ -228,7 +229,8 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.courseDetails = IDSCourseDetails()
             self.assignmentNumber = assignmentNumber
             CourseID = self.courseDetails['CourseID']
-            self.header = '''%md\n# Assignment {} for Course {}\nMake sure you pass the `# ... Test` cells and\n submit your solution notebook in the corresponding assignment on the course website. You can submit multiple times before the deadline and your highest score will be used.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
+            if (self.header == None):
+                self.header = '''%md\n# Assignment {} for Course {}\nMake sure you pass the `# ... Test` cells and\n submit your solution notebook in the corresponding assignment on the course website. You can submit multiple times before the deadline and your highest score will be used.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
 
             super().__init__(courseNotebooks, assignmentNumber)
         elif (notebook!=None): # called from AutoGrader.py > safeRunNotebook
@@ -380,6 +382,12 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         return the platform specific names for the list of cells and the individual cells
         """
         return 'cells','source'
+    
+    def to_nb(self, target_filename, notebook_type='problem_solution_TEST'):
+        assignmentNotebook = self.to_notebook(notebook_type=notebook_type)
+            
+        with open(target_filename, mode='w') as f:
+            nbformat.write(assignmentNotebook,f)
 
     def to_notebook(self,notebook_type='problem_solution_TEST',notebook_language=""):
         '''
@@ -431,7 +439,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         '''
         return nbformat.writes(self.to_notebook(notebook_language=notebook_language,notebook_type="grading_problem_TEST"))
 
-class IDSExamNotebook(AssignmentNotebook):
+class IDSExamNotebook(IDSAssignmentNotebook):
     """
     Represents an assignmentNotebook for Introduction to Data Science (IDS)
     Extends on AssignmentNotebook but has some extra bells and whistles.
@@ -443,7 +451,7 @@ class IDSExamNotebook(AssignmentNotebook):
     Methods:
 
     """
-    def __init__(self,courseNotebooks = None,assignmentNumber = 1,nb_filename=None, notebook=None,examHeader=''):
+    def __init__(self,courseNotebooks = None,assignmentNumber = 1,nb_filename=None, notebook=None,examHeader='',examIDHeader=False):
         self.notebook = None
 
         if (nb_filename != None):
@@ -452,19 +460,24 @@ class IDSExamNotebook(AssignmentNotebook):
             assert self.courseDetails == IDSCourseDetails()
             self.header = self._extractHeader(self.notebook)
             self.examHeader = examHeader
+            self.examIDHeader = examIDHeader
             self.assignments = self._extractProblems(self.notebook)
         elif courseNotebooks != None:
             self.courseDetails = IDSCourseDetails()
             self.assignmentNumber = assignmentNumber
             CourseID = self.courseDetails['CourseID']
-            self.header = '''# Exam {} for Course {}\\nMake sure you pass the `# ... Test` cells and\\n submit your solution notebook in the corresponding assignment on the course website.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
+            # self.header = '''# Exam {} for Course {}\\nMake sure you pass the `# ... Test` cells and\\n submit your solution notebook in the corresponding assignment on the course website.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
+            self.header = examHeader
             self.examHeader=examHeader
+            self.examIDHeader=examIDHeader
 
             super().__init__(courseNotebooks, assignmentNumber)
         elif (notebook!=None):
             self.notebook = notebook
             self.courseDetails, self.assignmentNumber = self._extractCourseDetails(self.notebook)
             self.header = self._extractHeader(self.notebook)
+            self.examHeader = self.header
+            self.examIDHeader = examIDHeader
             self.assignments = self._extractProblems(self.notebook)
         else:
             self.courseDetails = IDSCourseDetails()
@@ -618,13 +631,28 @@ class IDSExamNotebook(AssignmentNotebook):
             newCell = nbformat.v4.new_markdown_cell(self.header)
             newCell['metadata']['deletable']=False
             notebook['cells'].insert(0,newCell)
+            if (self.examIDHeader):
+                if (self.verifyExamID()):
+                    # Inser the cell from the notebook
+                    examID_str = self.notebook['cells'][1]['source']
+                else:
+                    examID_str = """# Insert your anonymous exam ID as a string in the variable below
+examID="XXX"
+"""
+                newCell = nbformat.v4.new_code_cell(examID_str)
+                newCell['metadata']['deletable']=False
+                notebook['cells'].insert(1,newCell)
         return notebook
 
     def verifyExamID(self):
-        examID = self.extractVariable(self.header[1],'MyAnonymousExamID')
-        if (examID != "XXX"):
-            return True
-        else:
+        try:
+            examIDSource = self.notebook['cells'][1]['source']
+            examID = self.extractVariable(examIDSource,'examID')
+            if (examID != "XXX"):
+                return True
+            else:
+                return False
+        except Exception as e:
             return False
 
     def getExamID(self):
@@ -789,8 +817,8 @@ class IDSCourse():
         for ass_num in self.assignments: # TODO: This should be streamlined, as I am repeating myself
             assignment = self.assignments[ass_num]
             assignment.to_nb(target_path+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem')
-            assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem+solution+TEST')
-            assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d_solution.ipynb' % ass_num,notebook_type='problem+solution')
+            # assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem+solution+TEST')
+            # assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d_solution.ipynb' % ass_num,notebook_type='problem+solution')
 
 
 
