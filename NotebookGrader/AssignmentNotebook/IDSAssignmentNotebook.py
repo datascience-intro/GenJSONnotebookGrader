@@ -229,6 +229,11 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.courseDetails = IDSCourseDetails()
             self.assignmentNumber = assignmentNumber
             CourseID = self.courseDetails['CourseID']
+            try:
+                self.header
+            except AttributeError:
+                self.header = None
+                
             if (self.header == None):
                 self.header = '''%md\n# Assignment {} for Course {}\nMake sure you pass the `# ... Test` cells and\n submit your solution notebook in the corresponding assignment on the course website. You can submit multiple times before the deadline and your highest score will be used.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
 
