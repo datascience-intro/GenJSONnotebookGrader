@@ -152,6 +152,7 @@ class Autograder:
                         + "/submissions/" +str(user_id)
                         + "?submission[posted_grade]="+str(grade)
                         + "&comment[file_ids]=%d" % file_id
+                        + "&comment[attempt]=%d" % submission['attempt']
                         + "&comment[text_comment]=" + comment[-2000:]
                         + "&access_token=" + self.course.API_KEY)
         else: # comment and grade to be uploaded (no file to be uploaded) as feedback << ok
@@ -159,6 +160,7 @@ class Autograder:
                         + "/assignments/"+ str(self.assignment_id)
                         + "/submissions/" +str(user_id)
                         + "?submission[posted_grade]="+str(grade)
+                        + "&comment[attempt]=%d" % submission['attempt']
                         + "&comment[text_comment]=" + comment[-2000:]
                         + "&access_token=" + self.course.API_KEY)
 
