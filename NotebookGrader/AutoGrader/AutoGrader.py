@@ -94,7 +94,10 @@ class Autograder:
         print("Uploading file for user_id: %d" % user_id)
         
         pure_file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
-        file_extension="html"
+        if pure_file_extension == "dbc":
+            file_extension="html"
+        else:
+            file_extension = pure_file_extension
         re_str = (self.course.base_req_str
             +  "/assignments/"+ str(self.assignment_id)
             + "/submissions/" +str(user_id)
