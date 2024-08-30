@@ -94,7 +94,10 @@ class Autograder:
         print("Uploading file for user_id: %d" % user_id)
         
         pure_file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
-        file_extension="html"
+        if pure_file_extension == "dbc":
+            file_extension="html"
+        else:
+            file_extension = pure_file_extension
         re_str = (self.course.base_req_str
             +  "/assignments/"+ str(self.assignment_id)
             + "/submissions/" +str(user_id)
@@ -241,10 +244,11 @@ class Autograder:
                                     self.prepareNotebookForGrading(studentSubmissionFileName,masterNotebookFileName,student_id) # <<< .ipynb, .scala, .r, etc (not dbc)
                                 else:
                                     gradeDict = self.safeGradeNotebook(studentSubmissionFileName,masterNotebookFileName,student_id, assName = self.assignment.attributes['name']) # <<< .ipynb, .scala, .r, etc (not dbc)
-
+                                    print("gradeDict created")
                                     grade = gradeDict['lx_problem_total_scored_points']
                                     comment = gradeDict['text_response'].replace('#','')
                                     #writeResponseFile
+                                    print("Trying to write response file")
                                     if (gradeDict['Response_Notebook'] != ''): #<< json dict << check if it is dbc (zip + remove) or ipynb
                                         self.writeResponseFile(gradeDict['Response_Notebook'],student_id,submission['attempt'],studentSubmissionFileName)
 
@@ -450,9 +454,12 @@ class Autograder:
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
             print("create AssNB out of graded_nb")
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
+            print(stdOutString)
+            print("Extracted the results!")
             print(finalGradeDict)
             finalGradeDict.update({'text_response': stdOutString}) # Done
             #we can add this in assignmentnotebook class probably
+            print("Trying to add summary")
             finalGradeDict,final_graded_nb = self.addSummary(finalGradeDict,graded_ass_nb,graded_nb) # Done)
             # cannot do the following in AssignmentNotebook/extractResult so do it here instead
 
