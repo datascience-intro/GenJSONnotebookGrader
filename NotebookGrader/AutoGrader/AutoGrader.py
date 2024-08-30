@@ -452,6 +452,7 @@ class Autograder:
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
             print("create AssNB out of graded_nb")
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
+            print("Extracted the results!")
             finalGradeDict.update({'text_response': stdOutString}) # Done
             #we can add this in assignmentnotebook class probably
             print("Trying to add summary")
