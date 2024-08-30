@@ -67,13 +67,13 @@ class IDSAutoGrader(Autograder):
         '''
         if notebook: # pass notebook as json dict for grading     
         
-            
             import epicbox
-            epicbox.config.DOCKER_WORKDIR = '/home/sage/'
+            epicbox.config.DOCKER_WORKDIR = '/home/jovyan/'
             
             epicbox.configure(
                 profiles=[
-                    epicbox.Profile('python', 'sds-sagemath-autograde:latest',user='sage')
+                    #epicbox.Profile('python', 'sds-sagemath-autograde:latest',user='sage')
+                    epicbox.Profile('python', 'itds-autograde:latest',user='jovyan')
                 ]
             )
 
@@ -101,7 +101,8 @@ class IDSAutoGrader(Autograder):
             # I am not sure what implication that number actually has, because it is not 1-1 with
             # actual time. But the higher the more timout at least.
             
-            command = 'true;' + make_data_dir_command + move_command + 'jupyter nbconvert --to notebook --ExecutePreprocessor.kernel_name=sagemath --ExecutePreprocessor.timeout=600 --execute --allow-errors --stdout main.ipynb'
+            # command = 'true;' + make_data_dir_command + move_command + 'jupyter nbconvert --to notebook --ExecutePreprocessor.kernel_name=sagemath --ExecutePreprocessor.timeout=600 --execute --allow-errors --stdout main.ipynb'
+            command = 'true;' + make_data_dir_command + move_command + 'jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=600 --execute --allow-errors --stdout main.ipynb'
             result = epicbox.run('python', command, files=files, limits=limits)#,workdir=workdir)
             result['unknown_error'] = False #<< This is only used for databricks.
 

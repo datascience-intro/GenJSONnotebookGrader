@@ -409,18 +409,20 @@ class Autograder:
         # student_withInjectedTESTs_nb has a type of AssignmentNotebook
         # both filename can only be ipynb or source file (.scala, .r, etc unzipped from dbc) << file handled from _gradeSubmission()
         student_withInjectedTESTs_nb = self.prepareNotebookForGrading(student_nb_filename,master_soln_nb_filename,student_id)
+        #print(student_withInjectedTESTs_nb.nb_as_json(notebook_language="ipynb"))
         print("Done preparing notebook for grading")
 
         print("Writing student notebook with injected tests to variable")
         file_extension = student_nb_filename.split(".")[-1]
 
         content = student_withInjectedTESTs_nb.nb_as_json(notebook_language = file_extension)
-
+        #print(content)
         print("Done writing student notebook with injected tests to variable")
         print("Safe running notebook")
 
         #if file_extension != "ipynb": # scala, r, etc.
         result = self.safeRunNotebook(content, assName=assName) # pass json dict of *dbc* (as a source file) into safeRunNotebook <<<<<<<<<<<<<<<<<<<<<<<<<
+        #print(result)
 
         print("Done safe running notebook")
 
@@ -448,6 +450,7 @@ class Autograder:
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
             print("create AssNB out of graded_nb")
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
+            print(finalGradeDict)
             finalGradeDict.update({'text_response': stdOutString}) # Done
             #we can add this in assignmentnotebook class probably
             finalGradeDict,final_graded_nb = self.addSummary(finalGradeDict,graded_ass_nb,graded_nb) # Done)
