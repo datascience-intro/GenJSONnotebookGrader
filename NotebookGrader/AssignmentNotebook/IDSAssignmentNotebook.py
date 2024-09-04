@@ -235,7 +235,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 self.header = None
                 
             if (self.header == None):
-                self.header = '''%md\n# Assignment {} for Course {}\nMake sure you pass the `# ... Test` cells and\n submit your solution notebook in the corresponding assignment on the course website. You can submit multiple times before the deadline and your highest score will be used.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
+                self.header = '''\n# Assignment {} for Course {}\nMake sure you pass the `# ... Test` cells and\n submit your solution notebook in the corresponding assignment on the course website. You can submit multiple times before the deadline and your highest score will be used.'''.format(self.assignmentNumber,CourseID,CourseID,self.assignmentNumber)
 
             super().__init__(courseNotebooks, assignmentNumber)
         elif (notebook!=None): # called from AutoGrader.py > safeRunNotebook
