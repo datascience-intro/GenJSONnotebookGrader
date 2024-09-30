@@ -48,8 +48,8 @@ for assignment_conf in conf['Assignments']:
             auto.grade()
             #print("Taking a 30 minute break")
             #time.sleep(30*MINUTE)
-            print("Taking a 1 minute break")
-            time.sleep(1*MINUTE)
+            print("Taking a half day break")
+            time.sleep(0.5*DAY)
             pass
         print("Grading window for %s has ended" % assignment_conf['name'])
     else:
