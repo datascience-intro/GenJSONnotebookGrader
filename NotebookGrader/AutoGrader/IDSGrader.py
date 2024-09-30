@@ -88,6 +88,8 @@ class IDSAutoGrader(Autograder):
             make_data_dir_command = 'mkdir data;'
             move_command = ''.join(["mv %s data/;" % x['name'] for x in files])
             files.append({'name': 'main.ipynb', 'content': bytes(notebook,encoding='utf-8')})
+            with open('courseLink/master/jp/Utils.py','rb') as f:
+                files.append({'name': 'Utils.py', 'content': f.read()})
             
             # These limits are basically heuristic, and my idea is to make this an option somehow
             # Remember when setting these values is that Epicbox is sandboxing your code and not
