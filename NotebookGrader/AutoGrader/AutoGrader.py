@@ -466,7 +466,7 @@ class Autograder:
             # cannot do the following in AssignmentNotebook/extractResult so do it here instead
 
             # finalGradeDict.update({'Response_Notebook': graded_ass_nb.notebook}) # json dict << Done
-        finalGradeDict.update({'Response_Notebook': final_graded_nb}) # json dict << Done
+            finalGradeDict.update({'Response_Notebook': final_graded_nb}) # json dict << Done
 
         return finalGradeDict
 
