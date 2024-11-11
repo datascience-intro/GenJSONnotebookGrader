@@ -456,7 +456,7 @@ class Autograder:
             # we can then "manually" grade that file.
             print("Unknown error")
             if (errorComment == ""):
-                errorComment = 'Your notebook has an unknown error (but not about timeout and oom), please check'
+                errorComment = 'Your notebook has an unknown error, please check. The most likely culprit is that you have an infinite loop, a bug or simply that your code took too long to run. Please alert the course staff if you think this is an error.'
             graded_nb = None
 
         if (graded_nb):
