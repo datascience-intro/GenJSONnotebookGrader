@@ -432,9 +432,14 @@ class Autograder:
 
         print("Done safe running notebook")
 
-        assert result['timeout']==False , 'Your notebook timed out, try to optimize your code'
-        assert result['oom_killed']==False, 'Your notebook used too much memory, try to optimize your code'
-        assert result['unknown_error']==False, 'Your notebook has an unknown error (but not about timeout and oom), please check'
+        #assert result['timeout']==False , 'Your notebook timed out, try to optimize your code'
+        errorComment = ""
+        if result['timeout']:
+            errorComment = 'Your notebook timed out, try to optimize your code'
+        elif result['oom_killed']:
+            errorComment = 'Your notebook used too much memory, try to optimize your code'
+        elif result['unknown_error']:
+            errorComment = 'Your notebook has an unknown error (but not about timeout and oom), please check'
 
         try:
             print("Trying to read graded std_out from sandboxed environment")
@@ -450,6 +455,8 @@ class Autograder:
             # be an error message, so we say unknown error and tell the students to alert this to us
             # we can then "manually" grade that file.
             print("Unknown error")
+            if (errorComment == ""):
+                errorComment = 'Your notebook has an unknown error (but not about timeout and oom), please check'
             graded_nb = None
 
         if (graded_nb):
@@ -467,6 +474,8 @@ class Autograder:
 
             # finalGradeDict.update({'Response_Notebook': graded_ass_nb.notebook}) # json dict << Done
             finalGradeDict.update({'Response_Notebook': final_graded_nb}) # json dict << Done
+        else:
+            finalGradeDict.update({'text_response': errorComment})
 
         return finalGradeDict
 
