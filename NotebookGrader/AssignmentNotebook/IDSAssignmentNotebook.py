@@ -524,13 +524,22 @@ class IDSExamNotebook(IDSAssignmentNotebook):
             newCell['metadata']['lx_test_only'] = "True"
             firstCellSource = newCell['source']
             firstCellSource='''maxPoints={} # initialising the cummulative points\n'''.format(assignment.problem_points)+firstCellSource
-            if (index == 0):
+            # What can happen here is that there is only one problem and then the if/else statement will not work
+            if ((index == 0) and (len(assignmentsWithTest) == 1)):
+                # Special case of only one problem
+                firstCellSource=firstCellSource+cumPointsInitializer+cumPointsCounter
+                firstCellSource=firstCellSource+'''\nprint(" ")'''*3
+                firstCellSource=firstCellSource+'''\nprint("The number of points you have scored in total for this entire set of Problems is "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
+            elif (index == 0):
+                # This means we have more than one assignment
                 firstCellSource = firstCellSource+cumPointsInitializer+cumPointsCounter+cumThusFar
             elif (index == len(assignmentsWithTest)-1):
+                # Here we can also assume that we have more than one assignment
                 firstCellSource=firstCellSource+cumPointsCounter
                 firstCellSource=firstCellSource+'''\nprint(" ")'''*3
                 firstCellSource=firstCellSource+'''\nprint("The number of points you have scored in total for this entire set of Problems is "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
             else:
+                # Also here we have more than one assignment
                 firstCellSource=firstCellSource+cumPointsCounter+cumThusFar
 
             newCell['source'] = firstCellSource
