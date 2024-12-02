@@ -367,7 +367,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                         stdOutString += '\n'+md+'\n'+s+'\n'
                         sSplitByNewLines = s.split('\n')
                         ls = ''.join(sSplitByNewLines[0:])
-                        matchObj = re.match(r"^.*points you have scored in total for this entire set of Problems is\s+(\d+)\s+out of\s+(\d+).*$", ls, re.UNICODE)
+                        matchObj = re.match(r"^.*points you have scored in total for this entire set of Problems is\s+(\d+(?:\.\d+)?)\s+out of\s+(\d+).*$", ls, re.UNICODE)
                         #matchObj = re.match(r"^.*points you have accumulated thus far is\s+(\d+)\s+out of\s+(\d+).*$", ls, re.UNICODE)
                         if matchObj:
                             totScore=str(matchObj.group(1))
