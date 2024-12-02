@@ -291,7 +291,12 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 newCell['metadata']['lx_test_only'] = "True"
                 firstCellSource = newCell['source']
                 firstCellSource='''maxPoints={} # initialising the cummulative points\n'''.format(assignment.problem_points)+firstCellSource
-                if (index == 0):
+                if ((index == 0) and (len(assignmentsWithTest) == 1)):
+                    # Special case of only one problem
+                    firstCellSource=firstCellSource+cumPointsInitializer+cumPointsCounter
+                    firstCellSource=firstCellSource+'''\nprint(" ")'''*3
+                    firstCellSource=firstCellSource+'''\nprint("The number of points you have scored in total for this entire set of Problems is "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
+                elif (index == 0):
                     firstCellSource = firstCellSource+cumPointsInitializer+cumPointsCounter+cumThusFar
                 elif (index == len(assignmentsWithTest)-1):
                     firstCellSource=firstCellSource+cumPointsCounter
@@ -516,6 +521,7 @@ class IDSExamNotebook(IDSAssignmentNotebook):
         cumThusFar = '''\nprint("The number of points you have accumulated thus far is   "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
 
         assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]
+        print("In add")
         for index,assignment in enumerate(assignmentsWithTest):
             testCells = assignment.TEST_Cells.copy()
             assert len(testCells) == 1, "There can be only one TEST cell!"
