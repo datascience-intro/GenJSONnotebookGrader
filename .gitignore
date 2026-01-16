@@ -1,0 +1,14 @@
+# Ignore CPython compiled files
+__pycache__/
+*.py[cod]
+configGrader.json
+configGrader_old.json
+configNotebooks.json
+configNotebooks_old.json
+users.json
+.DS_Store
+Response/*
+StudentSubmission/*
+SolutionWTest/*
+GenerateMaterial/Assignments/*
+GenerateMaterial/generated_assignments/*
