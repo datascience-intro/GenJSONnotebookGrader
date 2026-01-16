@@ -464,6 +464,8 @@ class IDSExamNotebook(IDSAssignmentNotebook):
     """
     def __init__(self,courseNotebooks = None,assignmentNumber = 1,nb_filename=None, notebook=None,examHeader='',examIDHeader=False):
         self.notebook = None
+        self.cellNameForMetadata = "metadata"
+        self.cellName = "cells"
 
         if (nb_filename != None):
             self.notebook = self._load_notebook(nb_filename)
@@ -691,6 +693,7 @@ examID="XXX"
                         elif(type(line.value.value) == str):
                             return line.value.s
         return None
+
 
 
 
