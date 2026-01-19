@@ -679,7 +679,7 @@ examID="XXX"
             return False
 
     def getExamID(self):
-        return self.extractVariable(self.header[1],'MyAnonymousExamID')
+        return self.extractVariable(self.header[1],'examID')
 
     def extractVariable(self,cell_source,variableName):
         import ast
