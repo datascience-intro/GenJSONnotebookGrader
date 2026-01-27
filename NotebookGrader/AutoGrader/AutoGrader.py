@@ -77,7 +77,7 @@ class Autograder:
                 listStatsDict.append(statsDict)
         return listStatsDict
 
-    def _uploadFile(self,student_id,attemptnr):
+    def _uploadFile(self,student_id,attemptnr,inputStream=None):
         '''
             Uploads a file as a comment on the submission
             will be stored on Studium with attemptnr appended to the end of the name
@@ -110,7 +110,11 @@ class Autograder:
 
         try:
             url = response.json()['upload_url']
-            files = {'file': open('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension), 'rb')}
+
+            if (not inputStream):
+                files = {'file': open('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension), 'rb')}
+            else:
+                files = {'Response.ipynb': inputStream}
             r = requests.post(url, files=files)
 
             print(r.json()['upload_status'])
@@ -128,7 +132,7 @@ class Autograder:
         
         return r.json()['id'] #<< file_id
 
-    def _uploadSubmissionGrade(self,submission,grade,comment): # >>>>>>>> nothing changed
+    def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None): # >>>>>>>> nothing changed
         '''
             Uploads a grade and a comment for a submission up on the Studium website
 
@@ -144,7 +148,11 @@ class Autograder:
 
         file_id = 0
         if (self.sharp):
-            file_id = self._uploadFile(user_id,submission['attempt']) # ok
+            if (inputStream):
+                file_id = self._uploadFile(user_id,submission['attempt'],inputStream)
+                print(file_id)
+            else:
+                file_id = self._uploadFile(user_id,submission['attempt'],inputStream)
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str
@@ -461,7 +469,7 @@ class Autograder:
 
         if (graded_nb):
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
-            print("create AssNB out of graded_nb")
+            print("create AssNB out of graded_nb") 
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
             print(stdOutString)
             print("Extracted the results!")

@@ -362,9 +362,10 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                         #s = C['outputs'][0]["text"]
                         s = stdout_cell[0]["text"]
 
-                        matchObj = re.match(r"^.*((?://|#)\s+ASSIGNMENT\s+\d+,\s+TEST\s+\d+,\s+Points\s+\d+).*$", C['source'], flags=re.M | re.DOTALL | re.UNICODE | re.I)
+                        matchObj = re.search(r"(?:(?://|#)\s*(?:ASSIGNMENT|EXAM)\s+[A-Za-z0-9._-]+,\s*TEST\s+\d+,\s*POINTS?\s+\d+)",
+                                             C['source'], flags=re.M | re.DOTALL | re.UNICODE | re.I)
                         if matchObj:
-                            C['source'] = matchObj.group(1)
+                            C['source'] = matchObj.group(0).strip()
 
                         metadata = C['metadata']
                         md='''##TESTs for Problem {} of {} {} were run and their results are as follows:\n'''.format(metadata['lx_problem_number'],
