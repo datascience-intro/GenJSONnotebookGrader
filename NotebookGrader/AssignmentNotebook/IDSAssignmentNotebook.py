@@ -1,5 +1,6 @@
 #from .AssignmentNotebook import *
 from .AssignmentNotebook import *
+import copy
 
 
 class IDSCourseNotebook(CourseNotebook):
@@ -386,6 +387,36 @@ class IDSAssignmentNotebook(AssignmentNotebook):
 
 
         return finalGradesDict, stdOutString
+
+    def to_response_notebook(self, finalGradesDict=None, stdOutString=""):
+        """
+        Create a student-facing graded response notebook.
+
+        Hidden TEST cell source is removed so test code cannot be distributed,
+        but the executed output is kept so students can see the grading
+        feedback in the response notebook.
+        """
+        response_notebook = copy.deepcopy(self.notebook)
+        for cell in response_notebook['cells']:
+            metadata = cell.get('metadata', {})
+            is_hidden_test = (
+                metadata.get('lx_problem_cell_type') == 'TEST'
+                or metadata.get('lx_test_only', 'False') == 'True'
+            )
+            if is_hidden_test:
+                cell['source'] = ''
+                cell['execution_count'] = None
+                metadata['lx_problem_cell_type'] = 'TEST_OUTPUT'
+                metadata.pop('lx_test_only', None)
+                metadata['lx_test_source_removed'] = True
+
+        if finalGradesDict is not None:
+            md = '''The number of points you have scored in total for this entire set of Problems is {} out of {}.'''.format(
+                finalGradesDict['lx_problem_total_scored_points'],
+                finalGradesDict['lx_problem_total_possible_points'])
+            response_notebook['cells'].append(nbformat.v4.new_markdown_cell(md))
+
+        return response_notebook
 
     def getPlatformCellName(self,notebook):
         """

@@ -77,10 +77,14 @@ class Autograder:
                 listStatsDict.append(statsDict)
         return listStatsDict
 
-    def _uploadFile(self,student_id,attemptnr):
+    def _uploadFile(self,student_id,attemptnr,inputStream=None,filename=None):
         '''
             Uploads a file as a comment on the submission
             will be stored on Studium with attemptnr appended to the end of the name
+
+            Keyword arguments:
+            inputStream -- optional in-memory file object to upload instead of a file in Response/
+            filename -- optional filename to use when inputStream is supplied
 
             Returns:
             id -- the file_id that Studium assigns to this uploaded file, important to store
@@ -96,22 +100,36 @@ class Autograder:
         pure_file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
         if pure_file_extension == "dbc":
             file_extension="html"
+            content_type = "text/html"
         else:
             file_extension = pure_file_extension
+            content_type = "application/x-ipynb+json" if file_extension == "ipynb" else file_extension
+        if filename is None:
+            filename = "Response_%d_%d.%s" % (user_id,attemptnr,file_extension)
         re_str = (self.course.base_req_str
             +  "/assignments/"+ str(self.assignment_id)
             + "/submissions/" +str(user_id)
             + "/comments/files"
-            + "?name=Response_%d_%d.%s" % (user_id,attemptnr,file_extension) # Done
-            + "&content_type=%s" % (file_extension) # Done
+            + "?name=%s" % (filename) # Done
+            + "&content_type=%s" % (content_type) # Done
             +"&access_token=" + self.course.API_KEY)
 
         response = requests.post(re_str)
 
         try:
-            url = response.json()['upload_url']
-            files = {'file': open('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension), 'rb')}
-            r = requests.post(url, files=files)
+            upload_info = response.json()
+            url = upload_info['upload_url']
+            upload_params = upload_info.get('upload_params', {})
+            if inputStream is not None:
+                if hasattr(inputStream, 'seek'):
+                    inputStream.seek(0)
+                files = {'file': (filename, inputStream, content_type)}
+                r = requests.post(url, data=upload_params, files=files)
+            else:
+                response_filename = 'Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension)
+                with open(response_filename, 'rb') as response_file:
+                    files = {'file': (filename, response_file, content_type)}
+                    r = requests.post(url, data=upload_params, files=files)
 
             print(r.json()['upload_status'])
             if self.sharp:
@@ -128,7 +146,7 @@ class Autograder:
         
         return r.json()['id'] #<< file_id
 
-    def _uploadSubmissionGrade(self,submission,grade,comment): # >>>>>>>> nothing changed
+    def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None): # >>>>>>>> nothing changed
         '''
             Uploads a grade and a comment for a submission up on the Studium website
 
@@ -136,6 +154,7 @@ class Autograder:
             submission -- a submission
             grade -- integer representing the grade
             comment -- a string representing the comment to be uploaded, will be truncated to the last 2000 characters
+            inputStream -- optional in-memory response file to attach to the submission comment
         '''
         import requests
 
@@ -144,7 +163,7 @@ class Autograder:
 
         file_id = 0
         if (self.sharp):
-            file_id = self._uploadFile(user_id,submission['attempt']) # ok
+            file_id = self._uploadFile(user_id,submission['attempt'],inputStream=inputStream) # ok
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str

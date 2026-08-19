@@ -40,10 +40,13 @@ class IDSAutoGrader(Autograder):
 
 
     def addSummary(self,finalGradeDict,graded_ass_nb,graded_nb):
-        final_graded_nb = graded_ass_nb.notebook
         md = '''The number of points you have scored in total for this entire set of Problems is {} out of {}.'''.format(finalGradeDict['lx_problem_total_scored_points'], finalGradeDict['lx_problem_total_possible_points'])
-        newCell = nbformat.v4.new_markdown_cell(md)
-        final_graded_nb['cells'].append(newCell)
+        if hasattr(graded_ass_nb, 'to_response_notebook'):
+            final_graded_nb = graded_ass_nb.to_response_notebook(finalGradeDict, finalGradeDict.get('text_response', ''))
+        else:
+            final_graded_nb = graded_ass_nb.notebook
+            newCell = nbformat.v4.new_markdown_cell(md)
+            final_graded_nb['cells'].append(newCell)
         finalGradeDict['text_response'] = finalGradeDict['text_response']+md
         return finalGradeDict,final_graded_nb
 
@@ -111,6 +114,5 @@ class IDSAutoGrader(Autograder):
             return result
 
         return None # If no notebook, return none.
-
 
 
