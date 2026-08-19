@@ -163,7 +163,7 @@ class Autograder:
 
         file_id = 0
         if (self.sharp):
-            file_id = self._uploadFile(user_id,submission['attempt'],inputStream=inputStream) # ok
+            file_id = self._uploadFile(user_id, submission['attempt'], inputStream=inputStream, filename=filename) # ok
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str
@@ -480,7 +480,7 @@ class Autograder:
 
         if (graded_nb):
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
-            print("create AssNB out of graded_nb")
+            print("create AssNB out of graded_nb") 
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
             print(stdOutString)
             print("Extracted the results!")
