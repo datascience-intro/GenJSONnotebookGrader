@@ -58,23 +58,22 @@ All the specifics are to be put inside the config.json inside the package
 
 What needs to be specified in the configNotebooks.json are the following
 {
-  "master_notebooks":["Example_databricks_1"],
-  "notebook_file_extension":"db",
-  "notebook_folder":"../master/db",
-  "target_notebook_folder":"lectures",
-  "target_notebook_book_folder":"Notebooks",
-  "assignments":[1],
+  "master_notebooks":["01-Example", "Assignment_1"],
+  "notebook_file_extension":"ipynb",
+  "notebook_folder":"master/jp",
+  "target_notebook_folder":"build/student",
+  "target_assignment_master_folder":"build/private",
+  "target_notebook_book_folder":"build/book",
+  "assignments":[],
   "CourseID":"1MS041",
   "CourseName":"Introduction to Data Science: A Comp-Math-Stat Approach",
   "CourseInstance":"2020"
 }
 ```
-> To generate several assignments at the same time, just add the master notebooks and assignment-number to the config.
-"master_notebooks":["Example_databricks_1","Example_databricks_2"]
-"assignments":[1,2]
+> Release assignments cumulatively: `[]`, `[1]`, `[1, 2]`, and so on.
 > For the key `master_notebooks`, it is a list of names of master notebooks **WITHOUT** any file extension.
-> For the key `notebook_file_extension`, it is a file extension of master notebooks. For databricks notebooks, specify `db`,and for Jupyter notebooks, specify `jp`.
-> For the Key `notebook_folder`, it is a path to a directory that stores master notebooks. For databricks notebooks, they are stored in `master/db`, and for Jupyter notebooks, they are stored in `master/jp`. Different directory names or paths are also possible, if necessary.
+> For Jupyter generation, `notebook_file_extension` is `ipynb`.
+> Relative paths are resolved from the selected JSON configuration file. The CLI path overrides may be used instead; no symlink is required.
 
 # Specific classes creating a jupyter book for Intro to Data Science
 ## class IDSBookNotebook(CourseNotebook)

@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genjson-notebook-grader"
+version = "0.1.0"
+description = "Notebook generation and private grading tools"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "nbformat==5.10.4"
+]
+
+[project.scripts]
+genjson-student-notebooks = "NotebookGrader.generation_cli:student_main"
+genjson-assignment-notebooks = "NotebookGrader.generation_cli:assignment_main"
+
+[tool.setuptools.packages.find]
+include = ["NotebookGrader*"]

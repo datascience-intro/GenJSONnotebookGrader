@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "release_assignments": [1],
+  "assignments": {
+    "1": {
+      "problem_TEST": "Assignment_1_problem_TEST.ipynb",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}

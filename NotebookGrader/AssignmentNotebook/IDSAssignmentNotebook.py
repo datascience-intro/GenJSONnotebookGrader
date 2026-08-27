@@ -1,6 +1,7 @@
 #from .AssignmentNotebook import *
 from .AssignmentNotebook import *
 import copy
+from pathlib import Path
 
 
 class IDSCourseNotebook(CourseNotebook):
@@ -138,8 +139,6 @@ class IDSCourseNotebook(CourseNotebook):
         # take master NB and turn the #PROBLEM x, #POINT y, #TEST x into md cells
         #    ADD PROBLEM number in cell metadata
         #    TODO? make dictionary of points scored, etc.
-        print("Parsing Jupyter notebook")
-
         cellIndex=-1
         AssnProbSolDict={}
         indicesToInsertCells=[]
@@ -207,7 +206,14 @@ class IDSAssignmentNotebook(AssignmentNotebook):
     * initialize from a notebook
     """
     #this init is for now identical in both classes. maybe create a second init or add it to super init.
-    def __init__(self,courseNotebooks = None,assignmentNumber = 1,nb_filename=None, notebook=None):
+    def __init__(
+        self,
+        courseNotebooks=None,
+        assignmentNumber=1,
+        nb_filename=None,
+        notebook=None,
+        courseDetails=None,
+    ):
         self.notebook = None
         self.cellNameForMetadata = "metadata"
         self.cellName = "cells"
@@ -217,17 +223,26 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.courseDetails, self.assignmentNumber = self._extractCourseDetails(self.notebook) #<< Done
             #print(self.courseDetails)
             #print(IDSCourseDetails())
+            expected_course_details = courseDetails or IDSCourseDetails()
             try:
-                assert self.courseDetails == IDSCourseDetails() 
+                assert self.courseDetails == expected_course_details
             except AssertionError:
-                print("Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks.")
-                print("courseDetails in AssignmentNotebook: ", self.courseDetails)
-                print("courseDetails in IDSCourseDetails: ", IDSCourseDetails())
-                raise AssertionError()
+                raise AssertionError(
+                    "assignment notebook course metadata does not match the configured course"
+                )
             self.header = self._extractHeader(self.notebook) #<< Done
             self.assignments = self._extractProblems(self.notebook) #<< Done
         elif courseNotebooks != None:
-            self.courseDetails = IDSCourseDetails()
+            courseNotebooks = tuple(courseNotebooks)
+            if courseDetails is not None:
+                self.courseDetails = courseDetails
+            else:
+                first_course_notebook = next(iter(courseNotebooks), None)
+                self.courseDetails = (
+                    first_course_notebook.courseDetails
+                    if first_course_notebook is not None
+                    else IDSCourseDetails()
+                )
             self.assignmentNumber = assignmentNumber
             CourseID = self.courseDetails['CourseID']
             try:
@@ -245,7 +260,7 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             self.header = self._extractHeader(self.notebook)
             self.assignments = self._extractProblems(self.notebook)
         else:
-            self.courseDetails = IDSCourseDetails()
+            self.courseDetails = courseDetails or IDSCourseDetails()
             self.header = None
             self.assignments = None
             self.assignmentNumber = None
@@ -749,20 +764,23 @@ class IDSCourseDetails(CourseDetails):
     }
     """
         # might put this is superclass
-    def __init__(self):
-        import json
-        import pkg_resources
-        resource_package = __name__
-        resource_path = './../../configNotebooks.json'
+    def __init__(self, detailsDict=None, config_path=None):
+        if detailsDict is None:
+            import json
 
-        with pkg_resources.resource_stream(resource_package, resource_path) as f:
-            courseDetailsDict = json.load(f)
-        super().__init__(courseDetailsDict)
+            path = (
+                Path(config_path).expanduser().resolve()
+                if config_path is not None
+                else Path(__file__).resolve().parents[2] / "configNotebooks.json"
+            )
+            with path.open(encoding="utf-8") as handle:
+                detailsDict = json.load(handle)
+        super().__init__(dict(detailsDict))
 
 #class IDSLectureNotebook(CourseNotebook): 
 class IDSLectureNotebook(IDSCourseNotebook):
-    def __init__(self,nb_filename=None):
-        self.courseDetails = IDSCourseDetails()
+    def __init__(self,nb_filename=None, courseDetails=None):
+        self.courseDetails = courseDetails or IDSCourseDetails()
         self.metadataName = "metadata"
         self.cellName = "cells"
         self.header = '''# [{}](http://datascience-intro.github.io/1MS041-{}/)\
@@ -828,8 +846,9 @@ class IDSCourse():
     to_nb()
         makes a lecture notebook out of all notebooks described in IDSCourseDetails.
     """
-    def __init__(self):
-        self.courseDetails = IDSCourseDetails()
+    def __init__(self, courseDetails=None, verbose=False):
+        self.courseDetails = courseDetails or IDSCourseDetails()
+        self.verbose = verbose
         self.lectureNotebooks = self._load_notebooks()
         self.assignments = self._create_assignments()
 
@@ -837,9 +856,13 @@ class IDSCourse():
     def _load_notebooks(self):
         notebooks = {}
         #load Jupyter master notebooks from notebook_folder='master/jp'
-        print("load Jupyter master notebooks")
+        if self.verbose:
+            print(f"Loading {len(self.courseDetails['master_notebooks'])} Jupyter masters")
         for nb_name in self.courseDetails['master_notebooks']: #nb_name = 00, 01, 02, ...
-            notebooks[nb_name]=IDSLectureNotebook(self.courseDetails['notebook_folder']+"/" + nb_name + ".ipynb")
+            notebooks[nb_name]=IDSLectureNotebook(
+                self.courseDetails['notebook_folder']+"/" + nb_name + ".ipynb",
+                courseDetails=self.courseDetails,
+            )
 
 
         return notebooks
@@ -848,8 +871,36 @@ class IDSCourse():
         assignments = {}
         for assignment_number in self.courseDetails['assignments']:
             assignments[assignment_number]=IDSAssignmentNotebook(courseNotebooks=self.lectureNotebooks.values(),
-                                                                 assignmentNumber = assignment_number)
+                                                                 assignmentNumber = assignment_number,
+                                                                 courseDetails=self.courseDetails)
         return assignments
+
+    def student_notebooks(self):
+        """Build every student artifact in memory without writing it."""
+        notebooks = {}
+        for nb_name, notebook in self.lectureNotebooks.items():
+            notebooks[f"{nb_name}.ipynb"] = notebook.toLectureNotebook(skipAssignments=True)
+        for assignment_number, assignment in self.assignments.items():
+            notebooks[f"Assignment_{assignment_number}.ipynb"] = assignment.to_notebook(
+                notebook_type="problem"
+            )
+        return notebooks
+
+    def assignment_notebooks(self, notebook_types=None):
+        """Build all released private variants in memory without writing them."""
+        if notebook_types is None:
+            notebook_types = (
+                "problem",
+                "problem_TEST",
+                "solution_TEST",
+                "problem_solution",
+            )
+        notebooks = {}
+        for assignment_number, assignment in self.assignments.items():
+            for notebook_type in notebook_types:
+                filename = f"Assignment_{assignment_number}_{notebook_type}.ipynb"
+                notebooks[filename] = assignment.to_notebook(notebook_type=notebook_type)
+        return notebooks
 
     def makeAssignmentNotebooks(self,notebook_type='problem_solution_TEST'):
         for assignment_number in self.courseDetails['assignments']:
@@ -860,21 +911,17 @@ class IDSCourse():
         assignment = self.assignments[assignment_number] # {"1":"...IDSAssignmentNotebook Object...", "2":"...IDSAssignmentNotebook Object...", ...}
         #target_path = self.courseDetails['target_notebook_folder'] # lectures
         target_path = self.courseDetails['target_assignment_master_folder'] # assignments
+        os.makedirs(target_path, exist_ok=True)
         assignment.to_nb(target_path+"/"+"Assignment_%d_%s.ipynb" % (assignment_number,notebook_type),notebook_type)
 
 
     # Called from generate.py, line 12, course.to_nb()
     def to_nb(self):
         target_path = self.courseDetails['target_notebook_folder']
-        target_assignment_master_folder = self.courseDetails['target_assignment_master_folder']
-        for nb_name in self.lectureNotebooks:
-            notebook = self.lectureNotebooks[nb_name]
-            notebook.to_nb(target_path+'/' + nb_name + '.ipynb',skipAssignments=True)
-        for ass_num in self.assignments: # TODO: This should be streamlined, as I am repeating myself
-            assignment = self.assignments[ass_num]
-            assignment.to_nb(target_path+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem')
-            # assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d.ipynb' % ass_num,notebook_type='problem+solution+TEST')
-            # assignment.to_nb(target_assignment_master_folder+'/'+'Assignment_%d_solution.ipynb' % ass_num,notebook_type='problem+solution')
+        os.makedirs(target_path, exist_ok=True)
+        for filename, notebook in self.student_notebooks().items():
+            with open(os.path.join(target_path, filename), mode='w') as handle:
+                nbformat.write(notebook, handle)
 
 
 

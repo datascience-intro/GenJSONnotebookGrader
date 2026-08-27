@@ -1,63 +1,119 @@
 # GenJSONnotebookGrader
 
-Oskar Åsbrink, Kristoffer Torp
+GenJSONnotebookGrader parses canonical course master notebooks, produces
+student and private assignment variants, and can grade Jupyter submissions in
+Studium through Canvas. Jupyter generation is independent of the live grader:
+it neither imports Canvas nor changes network/TLS settings.
 
-2022, Uppsala, Sweden
+## Supported generation environment
 
-This project was supported by Combient Mix AB through summer internships at:
+The supported generation runtime is Python 3.11 and `nbformat==5.10.4`. The
+version and dependency are declared in `pyproject.toml`.
 
-Combient Competence Centre for Data Engineering Sciences, 
-Department of Mathematics, 
-Uppsala University, Uppsala, Sweden
+```bash
+python3.11 -m pip install .
+```
 
+Docker, Epicbox, the Canvas connector, and course execution dependencies are
+needed only for live grading, not for notebook generation or `--check`.
 
-This project is a refactoring and repackaging of work contributed by:
-- Suparerk Angkawattanawit
-- Benny Avelin
-- Raazesh Sainudiin
-- Tilo Wiklund
+## Notebook configuration
 
-Don't hesitate to raise an issue if you encounter errors.
+Copy `configNotebooks.json.template` to a course-owned JSON file and edit it.
+The generator does not require that file to live in this repository. Relative
+paths in the JSON are resolved from the JSON file's directory. Command-line
+path overrides are resolved from the invocation directory; release wrappers
+should pass absolute paths.
 
-## Introduction to the NotebookGrader
+The `assignments` list is a release gate. The only valid values are `[]`,
+`[1]`, `[1, 2]`, `[1, 2, 3]`, and `[1, 2, 3, 4]`. An unreleased assignment
+master produces a one-cell student placeholder. A released assignment also
+produces its student problem notebook and, through the private command, these
+four variants:
 
-This Notebook AutoGrader converts platform-specific notebooks to JSON to be able to run automatic grading of assignments that are then uploaded to Studium using the Canvas API.
+- `Assignment_N_problem.ipynb`
+- `Assignment_N_problem_TEST.ipynb`
+- `Assignment_N_solution_TEST.ipynb`
+- `Assignment_N_problem_solution.ipynb`
 
+Master names must be unique and all master files must exist. The source,
+student output, and private output directories must be distinct.
 
-This NotebookGrader supports:
+## Generate and validate
 
-1. Jupyter notebooks(*.ipynb*) with python and SageMath kernels
-2. Databricks notebooks(*.dbc*) with support for Python and Scala.
+Both entry points accept the same explicit path options and work from any
+directory. No course or output symlink is required.
 
+```bash
+python3.11 generateIDSNotebooks.py \
+  --config /path/to/configNotebooks.course.json \
+  --source-dir /path/to/course/master/jp \
+  --output-dir /tmp/student-stage \
+  --assignment-output-dir /tmp/grader-stage
 
-## Overview
+python3.11 generateIDSAssignmentMasterNotebooks.py \
+  --config /path/to/configNotebooks.course.json \
+  --source-dir /path/to/course/master/jp \
+  --output-dir /tmp/student-stage \
+  --assignment-output-dir /tmp/grader-stage
+```
 
-To use the NotebookGrader there are a couple of steps to follow:
-0. Clone the NotebookGrader,test_course and CanvasInterface repositories. Put them beside each other in the same folder.
-1. Create a 'Master' notebook. This is a notebooks which contains cells of different types: lecture cells(optional),  problem cells, test cells and solution cells. 
-2. From the master notebook, you generate the following notebooks
-    - Lecture notebook containing instruction cells, lecture cells etc
-    - Problem_TEST notebook that the NotebookGrader uses to correct the student submission
-    - Problem notebook for students to fill in
-3. Run the NotebookGrader which will fetch student submissions from Canvas, grade them and upload the results.
+Use `--list` to show resolved inputs and outputs without parsing or writing.
+Use `--check` to parse and validate the generated artifacts in memory without
+creating either output directory. Add `--verbose` for per-file output.
+Generation validates every notebook before it starts writing. Publication
+automation should still use fresh staging directories and validate the staged
+artifacts before synchronizing them elsewhere.
 
-## 0. Install necessary dependencies
-The NotebookGrader will use `python_on_whales` and `databricks-cli`. Install using
+## Safe Studium grader
 
-`pip3 install python_on_whales`
-`pip3 install databricks-cli`
+`configGrader.json` is a local secret file. It must remain ignored and
+untracked; `Grader.py` verifies both conditions before reading Canvas. Start
+from `configGrader.json.template`, replace its redacted values locally, and
+prefer owner-only permissions:
 
-## 1. Create a Master notebook
-The NotebookGrader needs the Master notebook to be in a specific format.
-For instructions on how to create a master notenook see the readme in [Test_course](https://github.com/datascience-intro/test_course)
+```bash
+cp configGrader.json.template configGrader.json
+chmod 600 configGrader.json
+```
 
-## 2. Generate notebooks
-For instructions on how to generate notebooks, see the readme in [Test_course](https://github.com/datascience-intro/test_course).
+The grader also requires an installed `grader-manifest.json`. See
+`grader-manifest.json.template`. For every cumulatively released assignment,
+the manifest records the installed `problem_TEST` filename, its SHA-256, and
+the SHA-256 of the current canonical `Assignment_N.ipynb`. The grader refuses
+missing, unreleased, modified, structurally invalid, or source-stale masters
+before constructing a Canvas client.
 
-## 3. Run the NotebookGrader
-For instructions on how to run the NotebookGrader, see the readme in NotebookGrader -> AutoGrader
+Local preflight also checks the configured Docker image, Epicbox, course data,
+and `Utils.py`. It does not contact Canvas:
 
+```bash
+python3.11 Grader.py --assignment 1 --preflight-only
+```
 
+The default mode is non-writing. During an active grading window it downloads
+and grades at most one controlled submission, but does not upload a score,
+comment, or file:
 
+```bash
+python3.11 Grader.py --assignment 1 --once
+python3.11 Grader.py --assignment 1 --submission-user 123456 --once
+```
 
+Canvas writes require the explicit `--apply` (or `--sharp`) flag. Review the
+public notebook and Canvas assignment manually before using it:
+
+```bash
+python3.11 Grader.py --assignment 1 --once --apply
+```
+
+Grading windows use timezone-aware `Europe/Stockholm` datetimes and end at
+23:59 on the configured end date. The default polling interval is 43,200
+seconds (twice daily); `--poll-seconds` overrides it for one run.
+
+## Tests
+
+```bash
+python3.11 -m unittest discover -s tests -v
+```
 

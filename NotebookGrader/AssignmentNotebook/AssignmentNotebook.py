@@ -2,6 +2,7 @@ from ntpath import join
 from hashlib import new
 from distutils.command.build_scripts import first_line_re
 from curses import raw
+import copy
 import nbformat
 import re
 import os 
@@ -446,7 +447,10 @@ class CourseNotebook:
                 the prepared student version of a notebook, with or without
                 the assignements
         """
-        lectureNotebook = self.notebook.copy()
+        # NotebookNode.copy() is shallow: inserting the generated header into a
+        # shallow copy also mutates the parsed master.  A deep copy makes
+        # generation/check operations repeatable on the same course object.
+        lectureNotebook = copy.deepcopy(self.notebook)
         #removed if statement. This might cause jp to temporarily crash
         # Begin by generating the metadata
         lectureNotebook = self._add_course_metadata(lectureNotebook,self.cellNameForMetadata) # <<<<<<<<
@@ -460,7 +464,7 @@ class CourseNotebook:
         # now in the metadata of the notebook.
 
         studentCells=[]
-        for cell in self.notebook[self.cellName]:
+        for cell in lectureNotebook[self.cellName]:
             appendCell=True
             if 'lx_problem_cell_type' in cell['metadata']:
                 probCellType = cell['metadata']['lx_problem_cell_type']
@@ -659,7 +663,6 @@ class AssignmentNotebook(CourseNotebook):
         """
         Loads a notebook from file
         """
-        print("Loading notebook: %s" % nb_filename)
         # with open(nb_filename,mode='r') as f:
         #     notebook = nbformat.read(f,as_version=4)
         # return notebook
@@ -1016,6 +1019,3 @@ class CourseDetails():
     
     def __str__(self) -> str:
         return str(self.detailsDict)
-
-
-    

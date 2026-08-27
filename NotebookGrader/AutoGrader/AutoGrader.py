@@ -1,30 +1,15 @@
-from asyncore import file_wrapper
-import sys
-print("Python version")
-print (sys.version)
-print("Version info.")
-print (sys.version_info)
-import sys
-print(sys.executable)
 import urllib.request
-import ssl
-import sys
 import nbformat
-#from package.GradingModule import *
-from NotebookGrader import  *
+from NotebookGrader.AssignmentNotebook.AssignmentNotebook import AssignmentNotebook
 import os
-from python_on_whales import docker
 import json
 from zipfile import ZipFile
 import re
 import subprocess
 
-unverified_context = ssl._create_unverified_context
-ssl._create_default_https_context = unverified_context
-
 
 class Autograder:
-    def __init__(self, course, assignment, master_nb_filename,sharp=False):
+    def __init__(self, course, assignment, master_nb_filename,sharp=False, runtime_config=None):
         '''
         Creates an Autograder object
 
@@ -40,6 +25,7 @@ class Autograder:
         self.master_nb_filename = master_nb_filename
         self.sharp = sharp
         self.submissions = None
+        self.runtime_config = runtime_config or {}
         #self.nbserver <- databricks, zeppelin, jupyter(incl sage)
     @staticmethod
     def makeAutoGrader(course,assignment,assignment_conf,conf=None,sharp=False):
@@ -47,7 +33,13 @@ class Autograder:
         file_ext = assignment_conf["master_filename"].split(".")[-1]
         if file_ext == "ipynb":
             from .IDSGrader import IDSAutoGrader
-            return IDSAutoGrader(course,assignment,assignment_conf['master_filename'],sharp)
+            return IDSAutoGrader(
+                course,
+                assignment,
+                assignment_conf['master_filename'],
+                sharp,
+                runtime_config=conf,
+            )
         elif file_ext == "dbc":
             from .DBGrader import DBAutoGrader
             return DBAutoGrader(course,assignment,assignment_conf['master_filename'],sharp,conf['dbc_workspace_dir'])
@@ -89,14 +81,14 @@ class Autograder:
             Returns:
             id -- the file_id that Studium assigns to this uploaded file, important to store
         '''
+        if not self.sharp:
+            return None
         filtered_submissions = [submission for submission in self.submissions if submission['user_id'] == student_id]
         submission = filtered_submissions[0] # submission with a correct student id
 
         import requests
         user_id = submission['user_id']
         user_name = self.course.get_user(user_id)['name'].replace(" ","_")
-        print("Uploading file for user_id: %d" % user_id)
-        
         pure_file_extension = self.master_nb_filename.split(".")[-1] # dbc, ipynb
         if pure_file_extension == "dbc":
             file_extension="html"
@@ -131,7 +123,7 @@ class Autograder:
                     files = {'file': (filename, response_file, content_type)}
                     r = requests.post(url, data=upload_params, files=files)
 
-            print(r.json()['upload_status'])
+            print("action=uploaded-feedback-file")
             if self.sharp:
 
                 if pure_file_extension != "ipynb":
@@ -139,8 +131,8 @@ class Autograder:
                     from NotebookGrader import upload_feedback_to_workspace
                     upload_feedback_to_workspace('Response/Response_%d_%d.%s' % (user_id,attemptnr,file_extension),user_name,user_id,attemptnr)
 
-        except Exception as e:
-            print(e)
+        except Exception as error:
+            print(f"action=feedback-file-error error={type(error).__name__}")
             return None
         
         
@@ -156,14 +148,24 @@ class Autograder:
             comment -- a string representing the comment to be uploaded, will be truncated to the last 2000 characters
             inputStream -- optional in-memory response file to attach to the submission comment
         '''
+        user_id = submission['user_id']
+        attempt = submission.get('attempt', '?')
+        assignment_name = self.assignment.attributes.get('name', '<unknown>')
+
+        if not self.sharp:
+            print(
+                "assignment=%r attempt=%s score=%s action=dry-run-no-upload"
+                % (assignment_name, attempt, grade)
+            )
+            return None
+
         import requests
 
-        user_id = submission['user_id']
-        print("Uploading grade for user_id: %d" % user_id)
-
-        file_id = 0
-        if (self.sharp):
-            file_id = self._uploadFile(user_id, submission['attempt'], inputStream=inputStream, filename=filename) # ok
+        file_id = self._uploadFile(
+            user_id,
+            submission['attempt'],
+            inputStream=inputStream,
+        )
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str
@@ -183,13 +185,12 @@ class Autograder:
                         + "&comment[text_comment]=" + comment[-2000:]
                         + "&access_token=" + self.course.API_KEY)
 
-        if (self.sharp): # << ok
-            resp = requests.put(re_str)
-            return resp
-        else: # << ok
-            print("Running in non-sharp mode")
-            print("points: ",grade)
-            print(comment)
+        response = requests.put(re_str)
+        print(
+            "assignment=%r attempt=%s score=%s action=uploaded"
+            % (assignment_name, attempt, grade)
+        )
+        return response
 
     def _uploadSubmissionComment(self,user_id,comment,force=False):
         '''
@@ -201,15 +202,13 @@ class Autograder:
             force -- if this should be forcefully put up, in general you have to have force=True but can be kept as false
             to make sure you are sending the right thing.
         '''
+        if not self.sharp:
+            print("assignment=%r action=dry-run-no-comment" % self.assignment.attributes.get('name', '<unknown>'))
+            return None
         import requests
-        print("Uploading comment for user_id: %d" % user_id)
 
         re_str = self.course.base_req_str +  "/assignments/"+ str(self.assignment_id)+ "/submissions/" +str(user_id) +  "?comment[text_comment]=" + comment[-2000:] + "&access_token=" + self.course.API_KEY
-        if (self.sharp | force):
-            resp = requests.put(re_str)
-        else:
-            print("Running in non-sharp mode")
-            print(comment)
+        return requests.put(re_str)
 
     def _gradeSubmission(self,submission,force=False, only_prepare=False):
         '''
@@ -237,17 +236,18 @@ class Autograder:
             pass
         else:
             if ((submission['grade'] == None) | (submission['grade_matches_current_submission'] == False) | (force)):
-                print("Submission needs grading !")
                 if (submission['missing'] == False): # Just testing to see that the submission actually exists
                     update_grade=True
                     if ('attachments' in submission):
-                        student = self.course.get_user(student_id)
-                        print("Checking student %s, User_id %s" % (student['name'],student_id)) # check if the student is really in the course
+                        self.course.get_user(student_id)
 
                         # Download attachment
                         attachments = submission['attachments']
                         if (len(attachments) == 1):
-                            print('Downloading attachment %s' % attachments[0]['filename'])
+                            print(
+                                "assignment=%r attempt=%s action=download"
+                                % (self.assignment.attributes.get('name', '<unknown>'), submission.get('attempt', '?'))
+                            )
 
                             file_extension = attachments[0]['filename'].split(".")[-1] # <<< ext here can be .dbc or .ipynb
                             studentSubmissionFileName = "StudentSubmission/"+str(student_id)+"_"+str(submission['attempt'])+"."+file_extension # << .dbc, .ipynb
@@ -258,25 +258,28 @@ class Autograder:
 
                             masterNotebookFileName,studentSubmissionFileName = self.extractStudentAndMasterFiles(studentSubmissionFileName,studentSubmissionFilePath,student_id,submission)
                             try:
-                                print("Grading nootebook!")
                                 if (only_prepare):
                                     grade = 0
                                     comment = ""
                                     self.prepareNotebookForGrading(studentSubmissionFileName,masterNotebookFileName,student_id) # <<< .ipynb, .scala, .r, etc (not dbc)
                                 else:
                                     gradeDict = self.safeGradeNotebook(studentSubmissionFileName,masterNotebookFileName,student_id, assName = self.assignment.attributes['name']) # <<< .ipynb, .scala, .r, etc (not dbc)
-                                    print("gradeDict created")
                                     grade = gradeDict['lx_problem_total_scored_points']
                                     comment = gradeDict['text_response'].replace('#','')
                                     #writeResponseFile
-                                    print("Trying to write response file")
                                     if (gradeDict['Response_Notebook'] != ''): #<< json dict << check if it is dbc (zip + remove) or ipynb
                                         self.writeResponseFile(gradeDict['Response_Notebook'],student_id,submission['attempt'],studentSubmissionFileName)
 
-                                print("Done grading")
+                                print(
+                                    "assignment=%r attempt=%s score=%s action=graded"
+                                    % (self.assignment.attributes.get('name', '<unknown>'), submission.get('attempt', '?'), grade)
+                                )
                             except Exception as e:
-                                comment = str(e)
-                                print(comment)
+                                comment = type(e).__name__
+                                print(
+                                    "assignment=%r attempt=%s action=grading-error error=%s"
+                                    % (self.assignment.attributes.get('name', '<unknown>'), submission.get('attempt', '?'), type(e).__name__)
+                                )
                         else:
                             comment = 'You should only have one file in the submission'
                 else:
@@ -317,7 +320,36 @@ class Autograder:
             if (update_grade):
                 self._uploadSubmissionGrade(submission,grade,comment)
             #upload to databricks
-        print("Grading round complete!")
+        print("action=grading-round-complete")
+
+    def gradeControlledSubmission(self, student_id=None):
+        """Grade at most one submitted attempt, uploading only in sharp mode."""
+        self._getSubmissions()
+        candidates = [
+            submission
+            for submission in self.submissions
+            if submission.get('workflow_state') != 'unsubmitted'
+            and not submission.get('missing', False)
+            and len(submission.get('attachments', [])) == 1
+        ]
+        if student_id is not None:
+            candidates = [
+                submission for submission in candidates
+                if submission.get('user_id') == student_id
+            ]
+        if not candidates:
+            return None
+        submission = candidates[0]
+        grade, comment, update_grade = self._gradeSubmission(submission, force=True)
+        action = "graded-no-upload"
+        if update_grade and self.sharp:
+            self._uploadSubmissionGrade(submission, grade, comment)
+            action = "uploaded"
+        return {
+            "attempt": submission.get('attempt'),
+            "score": grade,
+            "action": action,
+        }
 
 
     def gradeStudentSubmission(self,student_id,only_prepare=False):
@@ -335,7 +367,7 @@ class Autograder:
         grade, comment,update_grade = self._gradeSubmission(submission,force=True,only_prepare=only_prepare)
         if (update_grade & (not only_prepare)):
             return self._uploadSubmissionGrade(submission,grade,comment)
-        print("Student grading complete!")
+        print("action=student-grading-complete")
 
 
     def gradeStudentsWithGrade(self,grade,only_prepare=False):
@@ -430,26 +462,17 @@ class Autograder:
                         'text_response':'',
                         'Response_Notebook':''}
 
-        print("Preparing notebook for grading")
         # student_withInjectedTESTs_nb has a type of AssignmentNotebook
         # both filename can only be ipynb or source file (.scala, .r, etc unzipped from dbc) << file handled from _gradeSubmission()
         student_withInjectedTESTs_nb = self.prepareNotebookForGrading(student_nb_filename,master_soln_nb_filename,student_id)
         #print(student_withInjectedTESTs_nb.nb_as_json(notebook_language="ipynb"))
-        print("Done preparing notebook for grading")
-
-        print("Writing student notebook with injected tests to variable")
         file_extension = student_nb_filename.split(".")[-1]
 
         content = student_withInjectedTESTs_nb.nb_as_json(notebook_language = file_extension)
         #print(content)
-        print("Done writing student notebook with injected tests to variable")
-        print("Safe running notebook")
-
         #if file_extension != "ipynb": # scala, r, etc.
         result = self.safeRunNotebook(content, assName=assName) # pass json dict of *dbc* (as a source file) into safeRunNotebook <<<<<<<<<<<<<<<<<<<<<<<<<
         #print(result)
-
-        print("Done safe running notebook")
 
         #assert result['timeout']==False , 'Your notebook timed out, try to optimize your code'
         errorComment = ""
@@ -461,33 +484,23 @@ class Autograder:
             errorComment = 'Your notebook has an unknown error (but not about timeout and oom), please check'
 
         try:
-            print("Trying to read graded std_out from sandboxed environment")
-
             #if file_extension != "ipynb": # scala, r, etc.
             graded_nb = self.StringToNotebook(result['stdout']) # load json string into json dict
-
-            print("Done reading graded std_out from sandboxed environment")
 
         except:
             # We need this, because if something crashes that is not because of
             # timeout or oom_killed then the stdout will not be a notebook it will
             # be an error message, so we say unknown error and tell the students to alert this to us
             # we can then "manually" grade that file.
-            print("Unknown error")
             if (errorComment == ""):
                 errorComment = 'Your notebook has an unknown error, please check. The most likely culprit is that you have an infinite loop, a bug or simply that your code took too long to run. Please alert the course staff if you think this is an error.'
             graded_nb = None
 
         if (graded_nb):
             graded_ass_nb = AssignmentNotebook.createAssignmentNotebook(notebook=graded_nb,extension=file_extension) # AssignmentNotebook object << ok !
-            print("create AssNB out of graded_nb") 
             finalGradeDict, stdOutString = graded_ass_nb.extractResult() # Done
-            print(stdOutString)
-            print("Extracted the results!")
-            print(finalGradeDict)
             finalGradeDict.update({'text_response': stdOutString}) # Done
             #we can add this in assignmentnotebook class probably
-            print("Trying to add summary")
             finalGradeDict,final_graded_nb = self.addSummary(finalGradeDict,graded_ass_nb,graded_nb) # Done)
             # cannot do the following in AssignmentNotebook/extractResult so do it here instead
 

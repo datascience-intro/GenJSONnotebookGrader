@@ -5,7 +5,7 @@ import shutil
 class IDSAutoGrader(Autograder):
 
 
-    def __init__(self, course, assignment, master_nb_filename,sharp=False):
+    def __init__(self, course, assignment, master_nb_filename,sharp=False, runtime_config=None):
         '''
         Creates an Autograder object
 
@@ -21,7 +21,13 @@ class IDSAutoGrader(Autograder):
         #self.master_nb_filename = master_nb_filename
         #self.sharp = sharp
         #self.submissions = None
-        super().__init__(course, assignment, master_nb_filename,sharp)
+        super().__init__(
+            course,
+            assignment,
+            master_nb_filename,
+            sharp,
+            runtime_config=runtime_config,
+        )
 
     def writeResponseFile(self,response_notebook,student_id,submission_attempt,studentSubmissionFileName):
         with open('Response/Response_%d_%d.ipynb' % (student_id,submission_attempt),mode='w') as f:
@@ -73,25 +79,30 @@ class IDSAutoGrader(Autograder):
             import epicbox
             epicbox.config.DOCKER_WORKDIR = '/home/jovyan/'
             
+            docker_image = self.runtime_config.get('docker_image', 'itds-autograde:latest')
             epicbox.configure(
                 profiles=[
                     #epicbox.Profile('python', 'sds-sagemath-autograde:latest',user='sage')
-                    epicbox.Profile('python', 'itds-autograde:latest',user='jovyan')
+                    epicbox.Profile('python', docker_image, user='jovyan')
                 ]
             )
 
             
             import os
-            data_dir = os.listdir('data')
+            configured_data_dir = self.runtime_config.get('data_dir', 'data')
+            data_dir = os.listdir(configured_data_dir)
             files = []
             
             for filename in data_dir:
-                with open('data/'+filename,'rb') as f:
+                with open(os.path.join(configured_data_dir, filename),'rb') as f:
                     files.append({'name': filename, 'content': f.read()})
             make_data_dir_command = 'mkdir data;'
             move_command = ''.join(["mv %s data/;" % x['name'] for x in files])
             files.append({'name': 'main.ipynb', 'content': bytes(notebook,encoding='utf-8')})
-            with open('courseLink/master/jp/Utils.py','rb') as f:
+            configured_utils = self.runtime_config.get(
+                'utils_file', 'courseLink/master/jp/Utils.py'
+            )
+            with open(configured_utils,'rb') as f:
                 files.append({'name': 'Utils.py', 'content': f.read()})
             
             # These limits are basically heuristic, and my idea is to make this an option somehow
@@ -114,5 +125,4 @@ class IDSAutoGrader(Autograder):
             return result
 
         return None # If no notebook, return none.
-
 

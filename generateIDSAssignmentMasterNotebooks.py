@@ -1,8 +1,8 @@
-from NotebookGrader import IDSCourse
+#!/usr/bin/env python3
+"""Generate private Jupyter assignment variants."""
 
-idsCourse = IDSCourse()
+from NotebookGrader.generation_cli import assignment_main
 
-idsCourse.makeAssignmentNotebooks(notebook_type='problem')
-idsCourse.makeAssignmentNotebooks(notebook_type='problem_TEST')
-idsCourse.makeAssignmentNotebooks(notebook_type='solution_TEST')
-idsCourse.makeAssignmentNotebooks(notebook_type='problem_solution')
+
+if __name__ == "__main__":
+    raise SystemExit(assignment_main())

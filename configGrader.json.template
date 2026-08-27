@@ -1,17 +1,47 @@
 {
-    "course" : 54514,
-    "API_URL" : "https://uppsala.instructure.com",
-    "API_KEY" : "12345~xxxxxxxxxxxxxxxxxxxx",
-    "API_KEY_OWNER": "Jane Doe",
-    "Assignments" : [
-        {"name": "TEST_ASSIGNMENT_1",
-        "studium_id" : 0,
-        "master_filename" : "Master/ASSIGNMENT_1_problem_TEST.db",
-        "start_date" : "2022-09-03",
-        "end_date" : "2022-09-10"
-        }
-    ],
-    "dbc_cluster_id": "1234-123456-abcdefg2qi",
-    "dbc_cluster_name": "cluster_name",
-    "dbc_workspace_dir": "/Users/email"
+  "course": 123456,
+  "API_URL": "https://uppsala.instructure.com",
+  "API_KEY": "<canvas-token>",
+  "API_KEY_OWNER": "<token-owner>",
+  "timezone": "Europe/Stockholm",
+  "poll_interval_seconds": 43200,
+  "docker_image": "itds-autograde:latest",
+  "source_dir": "../1MS041/master/jp",
+  "data_dir": "../1MS041/master/jp/data",
+  "utils_file": "../1MS041/master/jp/Utils.py",
+  "grader_manifest": "GenerateMaterial/Assignments/grader-manifest.json",
+  "Assignments": [
+    {
+      "number": 1,
+      "name": "Autograded assignment 1",
+      "studium_id": 123451,
+      "master_filename": "GenerateMaterial/Assignments/Assignment_1_problem_TEST.ipynb",
+      "start_date": "2026-08-31",
+      "end_date": "2026-09-25"
+    },
+    {
+      "number": 2,
+      "name": "Autograded assignment 2",
+      "studium_id": 123452,
+      "master_filename": "GenerateMaterial/Assignments/Assignment_2_problem_TEST.ipynb",
+      "start_date": "2026-09-28",
+      "end_date": "2026-11-06"
+    },
+    {
+      "number": 3,
+      "name": "Autograded assignment 3",
+      "studium_id": 123453,
+      "master_filename": "GenerateMaterial/Assignments/Assignment_3_problem_TEST.ipynb",
+      "start_date": "2026-11-09",
+      "end_date": "2026-11-27"
+    },
+    {
+      "number": 4,
+      "name": "Autograded assignment 4",
+      "studium_id": 123454,
+      "master_filename": "GenerateMaterial/Assignments/Assignment_4_problem_TEST.ipynb",
+      "start_date": "2026-11-30",
+      "end_date": "2026-12-18"
+    }
+  ]
 }
