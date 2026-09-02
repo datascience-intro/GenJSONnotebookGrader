@@ -305,7 +305,13 @@ class GraderConfigTests(unittest.TestCase):
         )()
         grader = Autograder(course, assignment, "master.ipynb", sharp=True)
         grader._uploadFile = mock.Mock(return_value=77)
-        detailed_feedback = "Detailed private marker: problem 1 failed on line 42."
+        detailed_feedback = (
+            "TESTs for Problem 1 of ASSIGNMENT 1 were run and their results are as follows:\n"
+            "Detailed private marker: problem 1 failed on line 42.\n"
+            "The number of points you have scored for this problem is 8 out of 12\n"
+            "TESTs for Problem 2 of ASSIGNMENT 1 were run and their results are as follows:\n"
+            "The number of points you have scored for this problem is 10 out of 12"
+        )
 
         with mock.patch("requests.put") as put:
             grader._uploadSubmissionGrade(
@@ -315,9 +321,11 @@ class GraderConfigTests(unittest.TestCase):
             )
 
         request_url = put.call_args.args[0]
-        self.assertIn("Autograding complete. Score: 18.", request_url)
+        self.assertIn("Autograding complete. Total score: 18.", request_url)
+        self.assertIn("Problem 1: 8 out of 12", request_url)
+        self.assertIn("Problem 2: 10 out of 12", request_url)
         self.assertIn("attached return notebook for detailed feedback", request_url)
-        self.assertNotIn(detailed_feedback, request_url)
+        self.assertNotIn("Detailed private marker", request_url)
 
     def test_help_does_not_require_canvas_connector(self):
         result = subprocess.run(

@@ -139,17 +139,46 @@ class Autograder:
         return r.json()['id'] #<< file_id
 
     @staticmethod
-    def _summaryComment(grade, *, return_notebook_attached):
-        if return_notebook_attached:
-            return (
-                f"Autograding complete. Score: {grade}. "
-                "See the attached return notebook for detailed feedback."
-            )
-        return (
-            f"Autograding complete. Score: {grade}. "
-            "The return notebook could not be attached; contact course staff "
-            "for detailed feedback."
+    def _problemScores(comment):
+        """Extract per-problem totals without exposing detailed test feedback."""
+
+        heading_pattern = re.compile(
+            r"TESTs for Problem\s+([A-Za-z0-9._-]+)\b",
+            flags=re.IGNORECASE,
         )
+        score_pattern = re.compile(
+            r"points you have scored for this problem is\s+"
+            r"(\d+(?:\.\d+)?)\s+out of\s+(\d+(?:\.\d+)?)",
+            flags=re.IGNORECASE,
+        )
+        headings = list(heading_pattern.finditer(comment or ""))
+        scores = []
+        for index, heading in enumerate(headings):
+            end = headings[index + 1].start() if index + 1 < len(headings) else None
+            section = (comment or "")[heading.end():end]
+            score = score_pattern.search(section)
+            if score is not None:
+                scores.append((heading.group(1), score.group(1), score.group(2)))
+        return scores
+
+    @classmethod
+    def _summaryComment(cls, grade, comment, *, return_notebook_attached):
+        lines = [f"Autograding complete. Total score: {grade}."]
+        problem_scores = cls._problemScores(comment)
+        if problem_scores:
+            lines.append("Scores by problem:")
+            lines.extend(
+                f"Problem {problem}: {scored} out of {possible}"
+                for problem, scored, possible in problem_scores
+            )
+        if return_notebook_attached:
+            lines.append("See the attached return notebook for detailed feedback.")
+        else:
+            lines.append(
+                "The return notebook could not be attached; contact course staff "
+                "for detailed feedback."
+            )
+        return "\n".join(lines)
 
     def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None):
         '''
@@ -182,6 +211,7 @@ class Autograder:
         )
         summary_comment = self._summaryComment(
             grade,
+            comment,
             return_notebook_attached=file_id is not None,
         )
 
