@@ -138,14 +138,28 @@ class Autograder:
         
         return r.json()['id'] #<< file_id
 
-    def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None): # >>>>>>>> nothing changed
+    @staticmethod
+    def _summaryComment(grade, *, return_notebook_attached):
+        if return_notebook_attached:
+            return (
+                f"Autograding complete. Score: {grade}. "
+                "See the attached return notebook for detailed feedback."
+            )
+        return (
+            f"Autograding complete. Score: {grade}. "
+            "The return notebook could not be attached; contact course staff "
+            "for detailed feedback."
+        )
+
+    def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None):
         '''
             Uploads a grade and a comment for a submission up on the Studium website
 
             Keywords arguments:
             submission -- a submission
             grade -- integer representing the grade
-            comment -- a string representing the comment to be uploaded, will be truncated to the last 2000 characters
+            comment -- detailed feedback stored in the return notebook; it is not
+                copied into the Studium text comment
             inputStream -- optional in-memory response file to attach to the submission comment
         '''
         user_id = submission['user_id']
@@ -166,6 +180,10 @@ class Autograder:
             submission['attempt'],
             inputStream=inputStream,
         )
+        summary_comment = self._summaryComment(
+            grade,
+            return_notebook_attached=file_id is not None,
+        )
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str
@@ -174,7 +192,7 @@ class Autograder:
                         + "?submission[posted_grade]="+str(grade)
                         + "&comment[file_ids]=%d" % file_id
                         + "&comment[attempt]=%d" % submission['attempt']
-                        + "&comment[text_comment]=" + comment[-2000:]
+                        + "&comment[text_comment]=" + summary_comment
                         + "&access_token=" + self.course.API_KEY)
         else: # comment and grade to be uploaded (no file to be uploaded) as feedback << ok
             re_str = (self.course.base_req_str
@@ -182,7 +200,7 @@ class Autograder:
                         + "/submissions/" +str(user_id)
                         + "?submission[posted_grade]="+str(grade)
                         + "&comment[attempt]=%d" % submission['attempt']
-                        + "&comment[text_comment]=" + comment[-2000:]
+                        + "&comment[text_comment]=" + summary_comment
                         + "&access_token=" + self.course.API_KEY)
 
         response = requests.put(re_str)

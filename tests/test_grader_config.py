@@ -290,6 +290,35 @@ class GraderConfigTests(unittest.TestCase):
 
         self.assertIn("feedback:\nProblem 1 passed.", output.getvalue())
 
+    def test_uploaded_comment_summarizes_and_points_to_return_notebook(self):
+        from NotebookGrader.AutoGrader.AutoGrader import Autograder
+
+        course = type(
+            "Course",
+            (),
+            {"base_req_str": "https://example.invalid", "API_KEY": "secret"},
+        )()
+        assignment = type(
+            "Assignment",
+            (),
+            {"attributes": {"id": 1, "name": "Assignment 1"}},
+        )()
+        grader = Autograder(course, assignment, "master.ipynb", sharp=True)
+        grader._uploadFile = mock.Mock(return_value=77)
+        detailed_feedback = "Detailed private marker: problem 1 failed on line 42."
+
+        with mock.patch("requests.put") as put:
+            grader._uploadSubmissionGrade(
+                {"user_id": 7, "attempt": 2},
+                18,
+                detailed_feedback,
+            )
+
+        request_url = put.call_args.args[0]
+        self.assertIn("Autograding complete. Score: 18.", request_url)
+        self.assertIn("attached return notebook for detailed feedback", request_url)
+        self.assertNotIn(detailed_feedback, request_url)
+
     def test_help_does_not_require_canvas_connector(self):
         result = subprocess.run(
             [sys.executable, str(REPOSITORY_ROOT / "Grader.py"), "--help"],
