@@ -255,7 +255,12 @@ class GraderConfigTests(unittest.TestCase):
 
         self.assertEqual(
             result,
-            {"attempt": 2, "score": 24, "action": "graded-no-upload"},
+            {
+                "attempt": 2,
+                "score": 24,
+                "action": "graded-no-upload",
+                "feedback": "passed",
+            },
         )
         grader._gradeSubmission.assert_called_once_with(
             grader.submissions[0], force=True
@@ -263,6 +268,27 @@ class GraderConfigTests(unittest.TestCase):
         grader._uploadSubmissionGrade.assert_not_called()
         put.assert_not_called()
         post.assert_not_called()
+
+    def test_dry_run_prints_generated_feedback(self):
+        auto = mock.Mock()
+        auto.gradeControlledSubmission.return_value = {
+            "attempt": 2,
+            "score": 24,
+            "action": "graded-no-upload",
+            "feedback": "Problem 1 passed.",
+        }
+        configured = type("Configured", (), {"name": "Assignment 1"})()
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            Grader._run_round(
+                auto,
+                configured,
+                apply=False,
+                submission_user=7,
+            )
+
+        self.assertIn("feedback:\nProblem 1 passed.", output.getvalue())
 
     def test_help_does_not_require_canvas_connector(self):
         result = subprocess.run(

@@ -349,6 +349,7 @@ class Autograder:
             "attempt": submission.get('attempt'),
             "score": grade,
             "action": action,
+            "feedback": comment,
         }
 
 

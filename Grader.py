@@ -163,6 +163,9 @@ def _run_round(
                 result.get("action"),
             )
         )
+        if not apply:
+            print("feedback:")
+            print(result.get("feedback", ""))
         return
     auto.grade()
     print(f"assignment={configured.name!r} action=live-round-complete")
