@@ -312,6 +312,10 @@ class GenerationCLITests(unittest.TestCase):
             "lx_problem_cell_type": "PROBLEM",
             "lx_problem_points": "10",
         }
+        problem_2_metadata = {
+            **problem_metadata,
+            "lx_problem_number": "2",
+        }
         student = nbformat.v4.new_notebook(
             metadata=notebook_metadata,
             cells=[
@@ -331,6 +335,8 @@ class GenerationCLITests(unittest.TestCase):
                         "lx_test_only": "True",
                     },
                 ),
+                nbformat.v4.new_code_cell("answer_2 = None", metadata=problem_2_metadata),
+                nbformat.v4.new_code_cell("helper_2 = 4"),
             ],
         )
         master = nbformat.v4.new_notebook(
@@ -342,6 +348,14 @@ class GenerationCLITests(unittest.TestCase):
                     "assert answer is not None",
                     metadata={**problem_metadata, "lx_problem_cell_type": "TEST"},
                 ),
+                nbformat.v4.new_code_cell(
+                    "answer_2 = None",
+                    metadata=problem_2_metadata,
+                ),
+                nbformat.v4.new_code_cell(
+                    "assert answer_2 is not None",
+                    metadata={**problem_2_metadata, "lx_problem_cell_type": "TEST"},
+                ),
             ],
         )
 
@@ -351,7 +365,7 @@ class GenerationCLITests(unittest.TestCase):
         sources = [cell.source for cell in merged.to_notebook().cells]
 
         self.assertEqual(
-            sources[:-1],
+            sources[:5],
             [
                 "# Assignment 1",
                 "import math",
@@ -360,7 +374,10 @@ class GenerationCLITests(unittest.TestCase):
                 "My working notes",
             ],
         )
-        self.assertIn("assert answer is not None", sources[-1])
+        self.assertIn("assert answer is not None", sources[5])
+        self.assertEqual(sources[6:8], ["answer_2 = None", "helper_2 = 4"])
+        self.assertIn("assert answer_2 is not None", sources[8])
+        self.assertEqual(len(sources), 9)
         self.assertNotIn("spoofed test", "\n".join(sources))
         setup_metadata = merged.to_notebook().cells[1].metadata
         self.assertNotIn("lx_fake", setup_metadata)

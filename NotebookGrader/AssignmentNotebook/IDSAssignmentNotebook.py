@@ -381,9 +381,33 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                         if key.startswith('lx_'):
                             metadata.pop(key)
                 preserved_cells.append(cell)
-            returnNB.notebook['cells'] = preserved_cells
-            for current_assignment in assignments:
-                returnNB.notebook['cells'] += current_assignment.TEST_Cells
+            tests_by_problem = {
+                str(current_assignment.getProblemNumber()): current_assignment.TEST_Cells
+                for current_assignment in assignments
+            }
+            merged_cells = []
+            current_problem = None
+            inserted_tests = set()
+            for cell in preserved_cells:
+                cell_problem = cell.get('metadata', {}).get('lx_problem_number')
+                if (
+                    cell_problem is not None
+                    and current_problem is not None
+                    and str(cell_problem) != current_problem
+                    and current_problem not in inserted_tests
+                ):
+                    merged_cells += tests_by_problem.get(current_problem, [])
+                    inserted_tests.add(current_problem)
+                if cell_problem is not None:
+                    current_problem = str(cell_problem)
+                merged_cells.append(cell)
+            if current_problem is not None and current_problem not in inserted_tests:
+                merged_cells += tests_by_problem.get(current_problem, [])
+                inserted_tests.add(current_problem)
+            for problem, test_cells in tests_by_problem.items():
+                if problem not in inserted_tests:
+                    merged_cells += test_cells
+            returnNB.notebook['cells'] = merged_cells
             returnNB._preserve_cell_order = True
             return returnNB
 

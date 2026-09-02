@@ -106,7 +106,8 @@ and `Utils.py`. It does not contact Canvas:
 Student-created code and Markdown cells are preserved in their original order
 during grading and in the returned notebook. Reserved hidden-test cells are
 removed from submissions and replaced with the authoritative tests from the
-configured master. Missing or duplicated predefined problem cells are rejected.
+configured master immediately after each problem. Missing or duplicated
+predefined problem cells are rejected.
 Submitting a generated return notebook is also rejected: in apply mode the
 grader records 0 points with an explanatory Studium comment and does not create
 or attach another response notebook.
