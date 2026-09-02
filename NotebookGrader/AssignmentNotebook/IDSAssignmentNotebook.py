@@ -281,6 +281,18 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         notebook : AssignmentNotebook
             a notebook with the tests of assignmentNotebook added at the end
         """
+        response_markers = [
+            cell
+            for cell in self.notebook.get('cells', [])
+            if cell.get('metadata', {}).get('lx_problem_cell_type') == 'TEST_OUTPUT'
+            or cell.get('metadata', {}).get('lx_test_source_removed') is True
+        ]
+        if response_markers:
+            raise ValueError(
+                "This is a return notebook, not a valid assignment submission. "
+                "Copy your changes into the original assignment notebook and submit that file."
+            )
+
         #Lets add the tests for this one to the end
         assert(self.courseDetails == assignmentNotebook.courseDetails), "Assignment notebook courseDetails doesn't match. Check if course details in config.json in AssignmentNotebook are all correct and matched with student submision notebooks. Or, students might submit wrong notebooks." #<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 

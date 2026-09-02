@@ -412,6 +412,50 @@ class GenerationCLITests(unittest.TestCase):
                 notebook=master
             )
 
+    def test_grading_merge_rejects_a_return_notebook(self):
+        notebook_metadata = {
+            "lx_course_number": "TEST101",
+            "lx_course_name": "Test course",
+            "lx_course_instance": "2026",
+            "lx_assignment_number": 1,
+        }
+        problem_metadata = {
+            "lx_problem_number": "1",
+            "lx_problem_cell_type": "PROBLEM",
+            "lx_problem_points": "10",
+        }
+        response = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell("answer = 1", metadata=problem_metadata),
+                nbformat.v4.new_code_cell(
+                    "",
+                    metadata={
+                        **problem_metadata,
+                        "lx_problem_cell_type": "TEST_OUTPUT",
+                        "lx_test_source_removed": True,
+                    },
+                ),
+            ],
+        )
+        master = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell("answer = None", metadata=problem_metadata),
+                nbformat.v4.new_code_cell(
+                    "assert answer is not None",
+                    metadata={**problem_metadata, "lx_problem_cell_type": "TEST"},
+                ),
+            ],
+        )
+
+        with self.assertRaisesRegex(ValueError, "return notebook"):
+            IDSAssignmentNotebook(notebook=response) + IDSAssignmentNotebook(
+                notebook=master
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -248,7 +248,9 @@ class GraderConfigTests(unittest.TestCase):
             ]
 
         grader._getSubmissions = load_one_submission
-        grader._gradeSubmission = mock.Mock(return_value=(24, "passed", True))
+        grader._gradeSubmission = mock.Mock(
+            return_value=(24, "passed", True, True, False)
+        )
         grader._uploadSubmissionGrade = mock.Mock()
         with mock.patch("requests.put") as put, mock.patch("requests.post") as post:
             result = grader.gradeControlledSubmission(student_id=7)
@@ -260,6 +262,7 @@ class GraderConfigTests(unittest.TestCase):
                 "score": 24,
                 "action": "graded-no-upload",
                 "feedback": "passed",
+                "grading_error": False,
             },
         )
         grader._gradeSubmission.assert_called_once_with(
@@ -326,6 +329,87 @@ class GraderConfigTests(unittest.TestCase):
         self.assertIn("Problem 2: 10 out of 12", request_url)
         self.assertIn("attached return notebook for detailed feedback", request_url)
         self.assertNotIn("Detailed private marker", request_url)
+
+    def test_ungradeable_submission_uploads_zero_and_no_response_file(self):
+        from NotebookGrader.AutoGrader.AutoGrader import Autograder
+
+        course = type(
+            "Course",
+            (),
+            {"base_req_str": "https://example.invalid", "API_KEY": "secret"},
+        )()
+        assignment = type(
+            "Assignment",
+            (),
+            {"attributes": {"id": 1, "name": "Assignment 1"}},
+        )()
+        grader = Autograder(course, assignment, "master.ipynb", sharp=True)
+        grader._uploadFile = mock.Mock()
+        message = (
+            "This submission could not be graded and received 0 points. "
+            "Reason: This is a return notebook; submit the original assignment notebook."
+        )
+
+        with mock.patch("requests.put") as put:
+            grader._uploadSubmissionGrade(
+                {"user_id": 7, "attempt": 3},
+                0,
+                message,
+                attach_response=False,
+                grading_error=True,
+            )
+
+        grader._uploadFile.assert_not_called()
+        request_url = put.call_args.args[0]
+        self.assertIn("submission[posted_grade]=0", request_url)
+        self.assertIn("This submission could not be graded", request_url)
+        self.assertNotIn("return notebook for detailed feedback", request_url)
+
+    def test_grading_failure_returns_zero_without_writing_a_response(self):
+        from NotebookGrader.AutoGrader.AutoGrader import Autograder
+
+        course = type(
+            "Course",
+            (),
+            {"get_user": lambda self, user_id: {"name": "Student"}},
+        )()
+        assignment = type(
+            "Assignment",
+            (),
+            {"attributes": {"id": 1, "name": "Assignment 1"}},
+        )()
+        grader = Autograder(course, assignment, "master.ipynb", sharp=True)
+        grader.extractStudentAndMasterFiles = mock.Mock(
+            return_value=("master.ipynb", "StudentSubmission/7_2.ipynb")
+        )
+        grader.safeGradeNotebook = mock.Mock(
+            side_effect=ValueError(
+                "This is a return notebook; submit the original assignment notebook."
+            )
+        )
+        grader.writeResponseFile = mock.Mock()
+        submission = {
+            "user_id": 7,
+            "attempt": 2,
+            "workflow_state": "submitted",
+            "grade": None,
+            "grade_matches_current_submission": False,
+            "missing": False,
+            "attachments": [
+                {"filename": "response.ipynb", "url": "https://example.invalid/file"}
+            ],
+        }
+
+        with mock.patch("urllib.request.urlretrieve"):
+            result = grader._gradeSubmission(submission, force=True)
+
+        grade, comment, update_grade, response_ready, grading_error = result
+        self.assertEqual(grade, 0)
+        self.assertTrue(update_grade)
+        self.assertFalse(response_ready)
+        self.assertTrue(grading_error)
+        self.assertIn("return notebook", comment)
+        grader.writeResponseFile.assert_not_called()
 
     def test_help_does_not_require_canvas_connector(self):
         result = subprocess.run(

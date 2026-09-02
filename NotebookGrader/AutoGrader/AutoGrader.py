@@ -180,7 +180,16 @@ class Autograder:
             )
         return "\n".join(lines)
 
-    def _uploadSubmissionGrade(self,submission,grade,comment,inputStream=None):
+    def _uploadSubmissionGrade(
+        self,
+        submission,
+        grade,
+        comment,
+        inputStream=None,
+        *,
+        attach_response=True,
+        grading_error=False,
+    ):
         '''
             Uploads a grade and a comment for a submission up on the Studium website
 
@@ -190,6 +199,8 @@ class Autograder:
             comment -- detailed feedback stored in the return notebook; it is not
                 copied into the Studium text comment
             inputStream -- optional in-memory response file to attach to the submission comment
+            attach_response -- whether a generated return notebook should be attached
+            grading_error -- whether comment is an informative ungradeable-submission message
         '''
         user_id = submission['user_id']
         attempt = submission.get('attempt', '?')
@@ -204,16 +215,21 @@ class Autograder:
 
         import requests
 
-        file_id = self._uploadFile(
-            user_id,
-            submission['attempt'],
-            inputStream=inputStream,
-        )
-        summary_comment = self._summaryComment(
-            grade,
-            comment,
-            return_notebook_attached=file_id is not None,
-        )
+        file_id = None
+        if attach_response:
+            file_id = self._uploadFile(
+                user_id,
+                submission['attempt'],
+                inputStream=inputStream,
+            )
+        if grading_error:
+            summary_comment = comment
+        else:
+            summary_comment = self._summaryComment(
+                grade,
+                comment,
+                return_notebook_attached=file_id is not None,
+            )
 
         if (file_id != None): # comment, grade, and file to be uploaded as feedback << ok
             re_str = (self.course.base_req_str
@@ -277,6 +293,8 @@ class Autograder:
         comment = ""
         grade = 0
         update_grade = False
+        response_ready = False
+        grading_error = False
 
 
         if ((submission['workflow_state'] == 'unsubmitted')):
@@ -304,18 +322,29 @@ class Autograder:
 
                             masterNotebookFileName = self.master_nb_filename
 
-                            masterNotebookFileName,studentSubmissionFileName = self.extractStudentAndMasterFiles(studentSubmissionFileName,studentSubmissionFilePath,student_id,submission)
                             try:
+                                masterNotebookFileName,studentSubmissionFileName = self.extractStudentAndMasterFiles(studentSubmissionFileName,studentSubmissionFilePath,student_id,submission)
                                 if (only_prepare):
                                     grade = 0
                                     comment = ""
                                     self.prepareNotebookForGrading(studentSubmissionFileName,masterNotebookFileName,student_id) # <<< .ipynb, .scala, .r, etc (not dbc)
                                 else:
                                     gradeDict = self.safeGradeNotebook(studentSubmissionFileName,masterNotebookFileName,student_id, assName = self.assignment.attributes['name']) # <<< .ipynb, .scala, .r, etc (not dbc)
-                                    grade = gradeDict['lx_problem_total_scored_points']
+                                    response_ready = gradeDict['Response_Notebook'] != ''
+                                    if response_ready:
+                                        grade = gradeDict['lx_problem_total_scored_points']
+                                    else:
+                                        grade = 0
+                                        grading_error = True
                                     comment = gradeDict['text_response'].replace('#','')
+                                    if grading_error:
+                                        reason = comment.strip() or "the notebook did not produce a gradeable result"
+                                        comment = (
+                                            "This submission could not be graded and received 0 points. "
+                                            f"Reason: {reason}"
+                                        )
                                     #writeResponseFile
-                                    if (gradeDict['Response_Notebook'] != ''): #<< json dict << check if it is dbc (zip + remove) or ipynb
+                                    if response_ready: #<< json dict << check if it is dbc (zip + remove) or ipynb
                                         self.writeResponseFile(gradeDict['Response_Notebook'],student_id,submission['attempt'],studentSubmissionFileName)
 
                                 print(
@@ -323,17 +352,35 @@ class Autograder:
                                     % (self.assignment.attributes.get('name', '<unknown>'), submission.get('attempt', '?'), grade)
                                 )
                             except Exception as e:
-                                comment = type(e).__name__
+                                grade = 0
+                                response_ready = False
+                                grading_error = True
+                                comment = (
+                                    "This submission could not be graded and received 0 points. "
+                                    f"Reason: {e}"
+                                )
                                 print(
                                     "assignment=%r attempt=%s action=grading-error error=%s"
                                     % (self.assignment.attributes.get('name', '<unknown>'), submission.get('attempt', '?'), type(e).__name__)
                                 )
                         else:
-                            comment = 'You should only have one file in the submission'
+                            grade = 0
+                            grading_error = True
+                            comment = (
+                                "This submission could not be graded and received 0 points. "
+                                "Submit exactly one assignment notebook file."
+                            )
+                    else:
+                        grade = 0
+                        grading_error = True
+                        comment = (
+                            "This submission could not be graded and received 0 points. "
+                            "No notebook attachment was found."
+                        )
                 else:
                     pass
 
-        return grade, comment, update_grade
+        return grade, comment, update_grade, response_ready, grading_error
 
     def getStudentSubmission(self,student_id,student_name=None):
         '''
@@ -364,9 +411,15 @@ class Autograder:
         self._getSubmissions()
         for submission in self.submissions:
             self.currentSubmission = submission
-            grade, comment,update_grade = self._gradeSubmission(submission,force)
+            grade, comment, update_grade, response_ready, grading_error = self._gradeSubmission(submission,force)
             if (update_grade):
-                self._uploadSubmissionGrade(submission,grade,comment)
+                self._uploadSubmissionGrade(
+                    submission,
+                    grade,
+                    comment,
+                    attach_response=response_ready,
+                    grading_error=grading_error,
+                )
             #upload to databricks
         print("action=grading-round-complete")
 
@@ -378,7 +431,6 @@ class Autograder:
             for submission in self.submissions
             if submission.get('workflow_state') != 'unsubmitted'
             and not submission.get('missing', False)
-            and len(submission.get('attachments', [])) == 1
         ]
         if student_id is not None:
             candidates = [
@@ -388,16 +440,23 @@ class Autograder:
         if not candidates:
             return None
         submission = candidates[0]
-        grade, comment, update_grade = self._gradeSubmission(submission, force=True)
-        action = "graded-no-upload"
+        grade, comment, update_grade, response_ready, grading_error = self._gradeSubmission(submission, force=True)
+        action = "grading-error-no-upload" if grading_error else "graded-no-upload"
         if update_grade and self.sharp:
-            self._uploadSubmissionGrade(submission, grade, comment)
-            action = "uploaded"
+            self._uploadSubmissionGrade(
+                submission,
+                grade,
+                comment,
+                attach_response=response_ready,
+                grading_error=grading_error,
+            )
+            action = "grading-error-uploaded" if grading_error else "uploaded"
         return {
             "attempt": submission.get('attempt'),
             "score": grade,
             "action": action,
             "feedback": comment,
+            "grading_error": grading_error,
         }
 
 
@@ -413,9 +472,15 @@ class Autograder:
         filtered_submissions = [submission for submission in self.submissions if submission['user_id'] == student_id]
         assert len(filtered_submissions) == 1, "Student does not exist"
         submission = filtered_submissions[0]
-        grade, comment,update_grade = self._gradeSubmission(submission,force=True,only_prepare=only_prepare)
+        grade, comment, update_grade, response_ready, grading_error = self._gradeSubmission(submission,force=True,only_prepare=only_prepare)
         if (update_grade & (not only_prepare)):
-            return self._uploadSubmissionGrade(submission,grade,comment)
+            return self._uploadSubmissionGrade(
+                submission,
+                grade,
+                comment,
+                attach_response=response_ready,
+                grading_error=grading_error,
+            )
         print("action=student-grading-complete")
 
 
@@ -433,9 +498,15 @@ class Autograder:
         filtered_submissions = [submission for submission in self.submissions if submission['grade'] == str(grade)]
 
         for submission in filtered_submissions:
-            grade, comment,update_grade = self._gradeSubmission(submission,force=True,only_prepare = only_prepare)
+            grade, comment, update_grade, response_ready, grading_error = self._gradeSubmission(submission,force=True,only_prepare = only_prepare)
             if (update_grade & (not only_prepare)):
-                self._uploadSubmissionGrade(submission,grade,comment)
+                self._uploadSubmissionGrade(
+                    submission,
+                    grade,
+                    comment,
+                    attach_response=response_ready,
+                    grading_error=grading_error,
+                )
 
         return [submission['user_id'] for submission in filtered_submissions]
 
