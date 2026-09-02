@@ -103,6 +103,11 @@ SHA-256 of the current canonical `Assignment_N.ipynb`.
 Local preflight also checks the configured Docker image, Epicbox, course data,
 and `Utils.py`. It does not contact Canvas:
 
+Student-created code and Markdown cells are preserved in their original order
+during grading and in the returned notebook. Reserved hidden-test cells are
+removed from submissions and replaced with the authoritative tests from the
+configured master. Missing or duplicated predefined problem cells are rejected.
+
 ```bash
 python3.11 Grader.py --assignment 1 --preflight-only
 ```

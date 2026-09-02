@@ -290,7 +290,11 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         # >> In case 'if' below doesn't work, use these following two lines instead. Also remove assignmentsWithTest inside if and elif !
         assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]  #<< swtich0
         if "source" in assignmentsWithTest[0].TEST_Cells[0]: #<< Use this if the line below doesn't work  << swtich0
-            assignments = self.assignments
+            assignments = [
+                assignment
+                for assignment in self.assignments
+                if len(assignment.PROBLEM_Cells) > 0
+            ]
             numAssignments = len(assignmentNotebook.assignments)
 
             cumPointsInitializer = '''\ncumPoints=0; cumMaxPoints=0 # initialising the cummulative & cumMax points\n'''
@@ -331,6 +335,17 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 test_problem_nr = testAssignment.getProblemNumber()
                 correct_problem_nr_assigment = [assignment for assignment in assignments if assignment.getProblemNumber() == test_problem_nr]
                 assert(len(correct_problem_nr_assigment) == 1), "There can only be one assignment with problem_nr: %s" % test_problem_nr
+                master_problem = [
+                    candidate
+                    for candidate in assignmentNotebook.assignments
+                    if candidate.getProblemNumber() == test_problem_nr
+                    and len(candidate.PROBLEM_Cells) > 0
+                ][0]
+                student_problem = correct_problem_nr_assigment[0]
+                assert (
+                    len(student_problem.PROBLEM_Cells) == len(master_problem.PROBLEM_Cells)
+                    and len(student_problem.Test_Cells) == len(master_problem.Test_Cells)
+                ), "Problem %s has missing or duplicated predefined cells" % test_problem_nr
                 correct_problem_nr_assigment[0].TEST_Cells = testCells
                 #print(correct_problem_nr_assigment[0])
 
@@ -339,6 +354,25 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             returnNB.courseDetails = self.courseDetails
             returnNB.assignmentNumber = self.assignmentNumber
             returnNB.header = self.header
+            returnNB.notebook = copy.deepcopy(self.notebook)
+            preserved_cells = []
+            for cell in returnNB.notebook['cells']:
+                metadata = cell.get('metadata', {})
+                is_hidden_test = (
+                    metadata.get('lx_problem_cell_type') == 'TEST'
+                    or metadata.get('lx_test_only', 'False') in (True, 'True')
+                )
+                if is_hidden_test:
+                    continue
+                if 'lx_problem_number' not in metadata:
+                    for key in list(metadata):
+                        if key.startswith('lx_'):
+                            metadata.pop(key)
+                preserved_cells.append(cell)
+            returnNB.notebook['cells'] = preserved_cells
+            for current_assignment in assignments:
+                returnNB.notebook['cells'] += current_assignment.TEST_Cells
+            returnNB._preserve_cell_order = True
             return returnNB
 
         # ---
@@ -465,6 +499,9 @@ class IDSAssignmentNotebook(AssignmentNotebook):
         notebook : nbformat.NotebookNode
             the ready made assignment Notebook.
         '''
+        if getattr(self, '_preserve_cell_order', False):
+            return self.notebook
+
         assignmentNotebook = nbformat.v4.new_notebook()
 
         assignmentNotebook = self._add_course_metadata(assignmentNotebook,"metadata")

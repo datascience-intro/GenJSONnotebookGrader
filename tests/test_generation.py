@@ -9,6 +9,7 @@ import unittest
 
 import nbformat
 
+from NotebookGrader.AssignmentNotebook.IDSAssignmentNotebook import IDSAssignmentNotebook
 from NotebookGrader.generation_config import GenerationConfigError, load_generation_config
 
 
@@ -298,6 +299,118 @@ class GenerationCLITests(unittest.TestCase):
             (empty_output / "Assignment_1.ipynb").read_bytes(),
             (released_output / "Assignment_1.ipynb").read_bytes(),
         )
+
+    def test_grading_merge_preserves_student_created_cells_in_order(self):
+        notebook_metadata = {
+            "lx_course_number": "TEST101",
+            "lx_course_name": "Test course",
+            "lx_course_instance": "2026",
+            "lx_assignment_number": 1,
+        }
+        problem_metadata = {
+            "lx_problem_number": "1",
+            "lx_problem_cell_type": "PROBLEM",
+            "lx_problem_points": "10",
+        }
+        student = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell(
+                    "import math",
+                    metadata={"lx_fake": "remove me", "trusted": "keep me"},
+                ),
+                nbformat.v4.new_code_cell("answer = None", metadata=problem_metadata),
+                nbformat.v4.new_code_cell("helper = math.sqrt(4)"),
+                nbformat.v4.new_markdown_cell("My working notes"),
+                nbformat.v4.new_code_cell(
+                    "raise RuntimeError('spoofed test')",
+                    metadata={
+                        **problem_metadata,
+                        "lx_problem_cell_type": "TEST",
+                        "lx_test_only": "True",
+                    },
+                ),
+            ],
+        )
+        master = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell("answer = None", metadata=problem_metadata),
+                nbformat.v4.new_code_cell(
+                    "assert answer is not None",
+                    metadata={**problem_metadata, "lx_problem_cell_type": "TEST"},
+                ),
+            ],
+        )
+
+        merged = IDSAssignmentNotebook(notebook=student) + IDSAssignmentNotebook(
+            notebook=master
+        )
+        sources = [cell.source for cell in merged.to_notebook().cells]
+
+        self.assertEqual(
+            sources[:-1],
+            [
+                "# Assignment 1",
+                "import math",
+                "answer = None",
+                "helper = math.sqrt(4)",
+                "My working notes",
+            ],
+        )
+        self.assertIn("assert answer is not None", sources[-1])
+        self.assertNotIn("spoofed test", "\n".join(sources))
+        setup_metadata = merged.to_notebook().cells[1].metadata
+        self.assertNotIn("lx_fake", setup_metadata)
+        self.assertEqual(setup_metadata["trusted"], "keep me")
+        response = merged.to_response_notebook(
+            {
+                "lx_problem_total_scored_points": "0",
+                "lx_problem_total_possible_points": "10",
+            }
+        )
+        response_sources = "\n".join(cell.source for cell in response.cells)
+        self.assertIn("helper = math.sqrt(4)", response_sources)
+        self.assertNotIn("assert answer is not None", response_sources)
+
+    def test_grading_merge_rejects_duplicated_predefined_problem_cells(self):
+        notebook_metadata = {
+            "lx_course_number": "TEST101",
+            "lx_course_name": "Test course",
+            "lx_course_instance": "2026",
+            "lx_assignment_number": 1,
+        }
+        problem_metadata = {
+            "lx_problem_number": "1",
+            "lx_problem_cell_type": "PROBLEM",
+            "lx_problem_points": "10",
+        }
+        student = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell("answer = 1", metadata=problem_metadata),
+                nbformat.v4.new_code_cell("answer = 2", metadata=problem_metadata),
+            ],
+        )
+        master = nbformat.v4.new_notebook(
+            metadata=notebook_metadata,
+            cells=[
+                nbformat.v4.new_markdown_cell("# Assignment 1"),
+                nbformat.v4.new_code_cell("answer = None", metadata=problem_metadata),
+                nbformat.v4.new_code_cell(
+                    "assert answer is not None",
+                    metadata={**problem_metadata, "lx_problem_cell_type": "TEST"},
+                ),
+            ],
+        )
+
+        with self.assertRaisesRegex(AssertionError, "missing or duplicated"):
+            IDSAssignmentNotebook(notebook=student) + IDSAssignmentNotebook(
+                notebook=master
+            )
 
 
 if __name__ == "__main__":
