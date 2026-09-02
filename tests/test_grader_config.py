@@ -141,6 +141,26 @@ class GraderConfigTests(unittest.TestCase):
         self.assertEqual((end.hour, end.minute), (23, 59))
         self.assertNotIn("private-test-token", repr(configuration))
 
+    def test_manifest_is_optional_and_config_assignments_are_selected(self):
+        raw = json.loads(self.config_path.read_text(encoding="utf-8"))
+        raw.pop("grader_manifest")
+        self.config_path.write_text(json.dumps(raw), encoding="utf-8")
+        (self.install_dir / "grader-manifest.json").unlink()
+
+        configuration = self._load(assignment_number=1)
+
+        self.assertEqual(configuration.released_assignments, (1,))
+        self.assertIsNone(configuration.manifest_path)
+        self.assertEqual(
+            configuration.assignments[0].master_path,
+            self.installed_path.resolve(),
+        )
+        self.assertEqual(configuration.assignments[0].source_sha256, "")
+
+    def test_explicit_missing_manifest_is_rejected(self):
+        with self.assertRaisesRegex(GraderConfigError, "grader manifest does not exist"):
+            self._load(manifest_path=self.root / "missing-manifest.json")
+
     def test_installed_master_hash_mismatch_is_rejected(self):
         self._write_manifest(installed_digest="0" * 64)
         with self.assertRaisesRegex(GraderConfigError, "master hash"):

@@ -64,7 +64,7 @@ class GraderConfiguration:
     source_dir: Path = Path("courseLink/master/jp")
     data_dir: Path = Path("courseLink/master/jp/data")
     utils_file: Path = Path("Utils.py")
-    manifest_path: Path = Path("grader-manifest.json")
+    manifest_path: Path | None = None
     permission_warning: str | None = None
 
 
@@ -375,57 +375,71 @@ def load_grader_config(
         base=base,
     )
 
-    if manifest_path is None:
-        manifest_value = raw.get("grader_manifest")
-        if manifest_value is None:
-            manifest = parsed_assignments[0].master_path.parent / "grader-manifest.json"
-        else:
-            manifest = _resolve_path(manifest_value, key="grader_manifest", base=base)
-    else:
+    manifest_value = raw.get("grader_manifest")
+    if manifest_path is not None:
         candidate = Path(manifest_path).expanduser()
         if not candidate.is_absolute():
             candidate = Path.cwd() / candidate
         manifest = candidate.resolve(strict=False)
+    elif manifest_value is not None:
+        manifest = _resolve_path(manifest_value, key="grader_manifest", base=base)
+    else:
+        manifest = None
 
-    releases, manifest_entries = _load_manifest(manifest)
     configured_by_number = {assignment.number: assignment for assignment in parsed_assignments}
-    missing_config = [number for number in releases if number not in configured_by_number]
-    if missing_config:
-        raise GraderConfigError(
-            "released assignments are missing grader configuration: "
-            + ", ".join(str(number) for number in missing_config)
-        )
+    manifest_entries: Mapping[str, Any] | None = None
+    if manifest is not None:
+        releases, manifest_entries = _load_manifest(manifest)
+        missing_config = [number for number in releases if number not in configured_by_number]
+        if missing_config:
+            raise GraderConfigError(
+                "released assignments are missing grader configuration: "
+                + ", ".join(str(number) for number in missing_config)
+            )
+    else:
+        releases = tuple(numbers)
+
     if assignment_number is not None and assignment_number not in releases:
+        if manifest is not None:
+            raise GraderConfigError(
+                f"assignment {assignment_number} is not released in the installed grader manifest"
+            )
         raise GraderConfigError(
-            f"assignment {assignment_number} is not released in the installed grader manifest"
+            f"assignment {assignment_number} is not present in the grader configuration"
         )
     selected_numbers = (assignment_number,) if assignment_number is not None else releases
     selected: list[GraderAssignment] = []
     for number in selected_numbers:
         assignment = configured_by_number[number]
-        filename, expected_digest, source_digest = _manifest_values(
-            manifest_entries[str(number)], number=number
-        )
-        installed_path = (manifest.parent / filename).resolve()
-        if installed_path != assignment.master_path.resolve():
-            raise GraderConfigError(
-                f"assignment {number} config and grader manifest identify different masters"
+        installed_path = assignment.master_path.resolve()
+        source_digest = ""
+        expected_digest: str | None = None
+        if manifest is not None:
+            assert manifest_entries is not None
+            filename, expected_digest, source_digest = _manifest_values(
+                manifest_entries[str(number)], number=number
             )
+            installed_path = (manifest.parent / filename).resolve()
+            if installed_path != assignment.master_path.resolve():
+                raise GraderConfigError(
+                    f"assignment {number} config and grader manifest identify different masters"
+                )
         _validate_master_notebook(installed_path, number)
         actual_digest = _sha256(installed_path)
-        if actual_digest != expected_digest:
+        if expected_digest is not None and actual_digest != expected_digest:
             raise GraderConfigError(
                 f"installed problem_TEST master hash does not match the grader manifest: {filename}"
             )
-        source_path = source_dir / f"Assignment_{number}.ipynb"
-        if not source_path.is_file():
-            raise GraderConfigError(
-                f"canonical assignment source does not exist: {source_path}"
-            )
-        if _sha256(source_path) != source_digest:
-            raise GraderConfigError(
-                f"canonical assignment source hash does not match the grader manifest: {source_path.name}"
-            )
+        if manifest is not None:
+            source_path = source_dir / f"Assignment_{number}.ipynb"
+            if not source_path.is_file():
+                raise GraderConfigError(
+                    f"canonical assignment source does not exist: {source_path}"
+                )
+            if _sha256(source_path) != source_digest:
+                raise GraderConfigError(
+                    f"canonical assignment source hash does not match the grader manifest: {source_path.name}"
+                )
         selected.append(
             GraderAssignment(
                 number=assignment.number,

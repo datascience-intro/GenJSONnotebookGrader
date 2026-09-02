@@ -145,6 +145,33 @@ class GenerationCLITests(unittest.TestCase):
         for filename in expected:
             nbformat.validate(nbformat.read(self.root / "private" / filename, as_version=4))
 
+    def test_private_cli_can_generate_an_unreleased_assignment_explicitly(self):
+        config = self._write_config([])
+        result = self._run(PRIVATE_SCRIPT, config, "--assignment", "2")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = {
+            f"Assignment_2_{notebook_type}.ipynb"
+            for notebook_type in (
+                "problem",
+                "problem_TEST",
+                "solution_TEST",
+                "problem_solution",
+            )
+        }
+        self.assertEqual(
+            {path.name for path in (self.root / "private").glob("*.ipynb")},
+            expected,
+        )
+
+    def test_explicit_private_assignment_must_have_a_configured_master(self):
+        raw = self._config([])
+        raw["master_notebooks"] = ["Lecture", "Assignment_1"]
+        config = self.root / "config.json"
+        config.write_text(json.dumps(raw), encoding="utf-8")
+        result = self._run(PRIVATE_SCRIPT, config, "--assignment", "2")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("selected assignments have no master", result.stderr)
+
     def test_check_and_list_do_not_create_output_directories(self):
         config = self._write_config([1])
         for script in (STUDENT_SCRIPT, PRIVATE_SCRIPT):

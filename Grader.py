@@ -227,8 +227,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"WARNING: {configuration.permission_warning}", file=sys.stderr)
         if args.preflight_only:
             selected = ",".join(str(item.number) for item in configuration.assignments)
+            manifest = configuration.manifest_path or "disabled"
             print(
-                f"Preflight passed: assignments=[{selected}] manifest={configuration.manifest_path}"
+                f"Preflight passed: assignments=[{selected}] manifest={manifest}"
             )
             return 0
 

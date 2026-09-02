@@ -58,6 +58,22 @@ python3.11 generateIDSAssignmentMasterNotebooks.py \
   --assignment-output-dir /tmp/grader-stage
 ```
 
+The private generator can also build an assignment without adding it to the
+configuration's release list. This keeps unreleased work out of student output:
+
+```bash
+python3.11 generateIDSAssignmentMasterNotebooks.py \
+  --config /path/to/configNotebooks.course.json \
+  --assignment 2
+```
+
+Repeat `--assignment` to generate more than one explicitly selected assignment.
+Each selected assignment must have an `Assignment_N.ipynb` entry in
+`master_notebooks`.
+
+The same operation is available in `CLI.py` under **Generate Material and
+Assignments → Generate Assignment by Number**.
+
 Use `--list` to show resolved inputs and outputs without parsing or writing.
 Use `--check` to parse and validate the generated artifacts in memory without
 creating either output directory. Add `--verbose` for per-file output.
@@ -77,12 +93,12 @@ cp configGrader.json.template configGrader.json
 chmod 600 configGrader.json
 ```
 
-The grader also requires an installed `grader-manifest.json`. See
-`grader-manifest.json.template`. For every cumulatively released assignment,
-the manifest records the installed `problem_TEST` filename, its SHA-256, and
-the SHA-256 of the current canonical `Assignment_N.ipynb`. The grader refuses
-missing, unreleased, modified, structurally invalid, or source-stale masters
-before constructing a Canvas client.
+An installed `grader-manifest.json` is optional. Without one, the grader uses
+the assignments and master filenames in `configGrader.json` and still validates
+the structure of each master notebook. To enable stricter release and integrity
+checks, set `grader_manifest` in the configuration or pass `--manifest`; the
+manifest records the installed `problem_TEST` filename, its SHA-256, and the
+SHA-256 of the current canonical `Assignment_N.ipynb`.
 
 Local preflight also checks the configured Docker image, Epicbox, course data,
 and `Utils.py`. It does not contact Canvas:
@@ -116,4 +132,3 @@ seconds (twice daily); `--poll-seconds` overrides it for one run.
 ```bash
 python3.11 -m unittest discover -s tests -v
 ```
-

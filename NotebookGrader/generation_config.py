@@ -132,6 +132,41 @@ class GenerationConfig:
 
         return dict(self.course_details)
 
+    def select_assignments(self, numbers: Sequence[int]) -> "GenerationConfig":
+        """Return a copy configured to generate explicitly selected assignments."""
+
+        selected = tuple(numbers)
+        if not selected:
+            raise GenerationConfigError("at least one assignment must be selected")
+        if any(isinstance(number, bool) or not isinstance(number, int) for number in selected):
+            raise GenerationConfigError("assignment selections must be integers")
+        if len(selected) != len(set(selected)):
+            raise GenerationConfigError("assignment selections must not contain duplicates")
+        if any(number not in SUPPORTED_ASSIGNMENTS for number in selected):
+            supported = ", ".join(str(number) for number in SUPPORTED_ASSIGNMENTS)
+            raise GenerationConfigError(
+                f"assignment selections must be among: {supported}"
+            )
+        missing = [
+            number for number in selected if f"Assignment_{number}" not in self.master_names
+        ]
+        if missing:
+            names = ", ".join(f"Assignment_{number}.ipynb" for number in missing)
+            raise GenerationConfigError(f"selected assignments have no master: {names}")
+
+        details = dict(self.course_details)
+        details["assignments"] = list(selected)
+        return GenerationConfig(
+            config_path=self.config_path,
+            source_dir=self.source_dir,
+            student_output_dir=self.student_output_dir,
+            assignment_output_dir=self.assignment_output_dir,
+            book_output_dir=self.book_output_dir,
+            master_names=self.master_names,
+            released_assignments=selected,
+            course_details=details,
+        )
+
 
 def load_generation_config(
     config_path: str | Path,

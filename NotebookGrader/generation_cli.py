@@ -45,6 +45,18 @@ def build_parser(*, private_variants: bool) -> argparse.ArgumentParser:
         type=Path,
         help="override target_assignment_master_folder from the configuration",
     )
+    if private_variants:
+        parser.add_argument(
+            "--assignment",
+            type=int,
+            action="append",
+            dest="assignments",
+            metavar="NUMBER",
+            help=(
+                "generate this assignment even when it is not in the configuration's "
+                "assignments release list; may be repeated"
+            ),
+        )
     parser.add_argument(
         "--list",
         action="store_true",
@@ -156,6 +168,8 @@ def run(argv: Sequence[str] | None = None, *, private_variants: bool) -> int:
             output_dir=args.output_dir,
             assignment_output_dir=args.assignment_output_dir,
         )
+        if private_variants and args.assignments:
+            config = config.select_assignments(args.assignments)
         if args.list_only:
             _print_resolution(config)
 

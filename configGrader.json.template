@@ -9,7 +9,6 @@
   "source_dir": "../1MS041/master/jp",
   "data_dir": "../1MS041/master/jp/data",
   "utils_file": "../1MS041/master/jp/Utils.py",
-  "grader_manifest": "GenerateMaterial/Assignments/grader-manifest.json",
   "Assignments": [
     {
       "number": 1,

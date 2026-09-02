@@ -1,9 +1,14 @@
 from CanvasInterface import Course
 import json
+from pathlib import Path
 from NotebookGrader import Autograder
 from NotebookGrader.AssignmentNotebook.IDSAssignmentNotebook import IDSCourse
+from NotebookGrader.generation_cli import assignment_main
 
-with open("configGrader.json","r") as f:
+BASE_DIR = Path(__file__).resolve().parent
+USERS_PATH = BASE_DIR / "users.json"
+
+with (BASE_DIR / "configGrader.json").open("r", encoding="utf-8") as f:
     conf = json.load(f)
 
 course = Course(API_URL=conf['API_URL'],API_KEY=conf['API_KEY'],COURSE_ID=conf['course'])
@@ -27,14 +32,17 @@ def get_user(course,user_id):
         return user['name']
 
 
-with open('users.json','r') as f:
-    user_dict = json.load(f)
-    if (type(user_dict) != dict):
-        user_dict = {}
+try:
+    with USERS_PATH.open("r", encoding="utf-8") as f:
+        user_dict = json.load(f)
+        if not isinstance(user_dict, dict):
+            user_dict = {}
+except (FileNotFoundError, json.JSONDecodeError):
+    user_dict = {}
 
 def save_users():
-    with open('users.json','w') as f:
-        json.dump(user_dict,f)
+    with USERS_PATH.open("w", encoding="utf-8") as f:
+        json.dump(user_dict, f)
 
 def clear_downloads():
     # Delete files in StudentSubmission
@@ -71,7 +79,12 @@ def greet():
         greet()
 
 def menu_generate():
-    options = ["Generate Material","Generate Assignments","Back"]
+    options = [
+        "Generate Material",
+        "Generate Released Assignments",
+        "Generate Assignment by Number",
+        "Back",
+    ]
     terminal_menu = TerminalMenu(options)
     menu_entry_index = terminal_menu.show()
     if (menu_entry_index == 0):
@@ -79,13 +92,15 @@ def menu_generate():
         idsCourse.to_nb()
         input("Material generated! Press Enter to continue.")
     elif (menu_entry_index == 1):
-        idsCourse = IDSCourse()
-
-        idsCourse.makeAssignmentNotebooks(notebook_type='problem')
-        idsCourse.makeAssignmentNotebooks(notebook_type='problem_TEST')
-        idsCourse.makeAssignmentNotebooks(notebook_type='solution_TEST')
-        idsCourse.makeAssignmentNotebooks(notebook_type='problem_solution')
-        input("Material generated! Press Enter to continue.")
+        assignment_main([])
+        input("Press Enter to continue.")
+    elif (menu_entry_index == 2):
+        assignment_number = input("Assignment number: ").strip()
+        if not assignment_number.isdigit():
+            print("Assignment number must be a positive integer.")
+        else:
+            assignment_main(["--assignment", assignment_number])
+        input("Press Enter to continue.")
 
 
 def listAssignments():
