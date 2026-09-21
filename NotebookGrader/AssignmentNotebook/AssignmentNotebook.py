@@ -737,36 +737,30 @@ class AssignmentNotebook(CourseNotebook):
         return nb
         
 
-    def _extractCourseDetails(self,notebook): # notebook loaded from _load_notebook above. this is just a json.
-        # called from AutoGrader.py > prepareNotebookForGrading > IDSAss > __init__
-        
-        details={}
-        assignmentNumber = -1
+    def _extractCourseDetails(self, notebook):
+        """Read required course metadata before constructing an assignment."""
+        metadata_name = self.getMetaDataCellName(notebook)
+        metadata = notebook.get(metadata_name, {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        course_fields = {
+            'CourseID': 'lx_course_number',
+            'CourseName': 'lx_course_name',
+            'CourseInstance': 'lx_course_instance',
+        }
+        required_fields = (*course_fields.values(), 'lx_assignment_number')
+        missing = [key for key in required_fields if metadata.get(key) in (None, '')]
+        if missing:
+            raise ValueError(
+                "Your notebook is missing required course/assignment metadata: "
+                + ', '.join(missing)
+                + ". Download a fresh copy of the original assignment notebook, "
+                "copy your answers into its existing answer cells, and submit that notebook. "
+                "If this happens with an unchanged original notebook, contact course staff."
+            )
+        details = {name: metadata[key] for name, key in course_fields.items()}
+        return details, metadata['lx_assignment_number']
 
-        #if "notebookMetadata" in notebook: # dbc
-        metadatacellname = self.getMetaDataCellName(notebook)
-        try:
-            details['CourseID']=notebook[metadatacellname]['lx_course_number']
-        except:
-            print("Course ID is not in metadata of input notebook")
-        try:
-            details['CourseName']=notebook[metadatacellname]['lx_course_name']
-        except:
-            print("Course Name is not in metadata of input notebook")
-        try:
-            details['CourseInstance']=notebook[metadatacellname]['lx_course_instance']
-        except:
-            print("Course Instance is not in metadata of input notebook")
-        try:
-            assignmentNumber=notebook[metadatacellname]['lx_assignment_number']
-        except:
-            print("Course Assignment Number is not in metadata of input notebook")
-
-        
-        return details,assignmentNumber
-        
-
-        
     def _extractHeader(self,notebook):
         if "notebookMetadata" in notebook: # dbc
             return notebook['commands'][0]['command']
