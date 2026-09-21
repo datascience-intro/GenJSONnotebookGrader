@@ -118,7 +118,14 @@ class IDSAutoGrader(Autograder):
             # actual time. But the higher the more timout at least.
             
             # command = 'true;' + make_data_dir_command + move_command + 'jupyter nbconvert --to notebook --ExecutePreprocessor.kernel_name=sagemath --ExecutePreprocessor.timeout=600 --execute --allow-errors --stdout main.ipynb'
-            command = 'true;' + make_data_dir_command + move_command + 'jupyter nbconvert --to notebook --ExecutePreprocessor.timeout=600 --execute --allow-errors --stdout main.ipynb'
+            # Use the container's Python kernel, regardless of the submission's local kernel name.
+            command = (
+                'true;' + make_data_dir_command + move_command
+                + 'jupyter nbconvert --to notebook'
+                ' --ExecutePreprocessor.kernel_name=python3'
+                ' --ExecutePreprocessor.timeout=600'
+                ' --execute --allow-errors --stdout main.ipynb'
+            )
             result = epicbox.run('python', command, files=files, limits=limits)#,workdir=workdir)
             result['unknown_error'] = False #<< This is only used for databricks.
 
