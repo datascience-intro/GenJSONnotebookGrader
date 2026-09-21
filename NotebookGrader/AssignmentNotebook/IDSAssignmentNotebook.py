@@ -1,6 +1,7 @@
 #from .AssignmentNotebook import *
 from .AssignmentNotebook import *
 import copy
+from decimal import Decimal
 from pathlib import Path
 
 
@@ -307,35 +308,20 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 for assignment in self.assignments
                 if len(assignment.PROBLEM_Cells) > 0
             ]
-            numAssignments = len(assignmentNotebook.assignments)
-
-            cumPointsInitializer = '''\ncumPoints=0; cumMaxPoints=0 # initialising the cummulative & cumMax points\n'''
-            cumPointsCounter = ('''\ncumPoints=cumPoints+local_points\ncumMaxPoints=cumMaxPoints+maxPoints\n'''
-                                '''print("The number of points you have scored for this problem is "+str(local_points)+" out of "+str(maxPoints))\n''')
-            cumThusFar = '''\nprint("The number of points you have accumulated thus far is   "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
-
-            assignmentsWithTest = [assignment for assignment in assignmentNotebook.assignments if len(assignment.TEST_Cells) > 0]
-            for index,assignment in enumerate(assignmentsWithTest):
+            for assignment in assignmentsWithTest:
                 testCells = assignment.TEST_Cells.copy()
                 assert len(testCells) == 1, "There can be only one TEST cell!"
                 newCell = nbformat.v4.new_code_cell(testCells[0]['source'])
                 newCell['metadata'] = testCells[0]['metadata']
                 newCell['metadata']['lx_test_only'] = "True"
                 firstCellSource = newCell['source']
-                firstCellSource='''maxPoints={} # initialising the cummulative points\n'''.format(assignment.problem_points)+firstCellSource
-                if ((index == 0) and (len(assignmentsWithTest) == 1)):
-                    # Special case of only one problem
-                    firstCellSource=firstCellSource+cumPointsInitializer+cumPointsCounter
-                    firstCellSource=firstCellSource+'''\nprint(" ")'''*3
-                    firstCellSource=firstCellSource+'''\nprint("The number of points you have scored in total for this entire set of Problems is "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
-                elif (index == 0):
-                    firstCellSource = firstCellSource+cumPointsInitializer+cumPointsCounter+cumThusFar
-                elif (index == len(assignmentsWithTest)-1):
-                    firstCellSource=firstCellSource+cumPointsCounter
-                    firstCellSource=firstCellSource+'''\nprint(" ")'''*3
-                    firstCellSource=firstCellSource+'''\nprint("The number of points you have scored in total for this entire set of Problems is "+str(cumPoints)+" out of "+str(cumMaxPoints))'''
-                else:
-                    firstCellSource=firstCellSource+cumPointsCounter+cumThusFar
+                firstCellSource='''maxPoints={} # maximum points for this problem\n'''.format(assignment.problem_points)+firstCellSource
+                # Each test reports its own score. A failed earlier test must not
+                # prevent later tests from recording their results.
+                firstCellSource += (
+                    '\nprint("The number of points you have scored for this problem is "'
+                    '+str(local_points)+" out of "+str(maxPoints))\n'
+                )
 
                 newCell['source'] = firstCellSource
                 testCells[0] = newCell
@@ -432,47 +418,69 @@ class IDSAssignmentNotebook(AssignmentNotebook):
             contains the result as a string, that can be reported back to the
             student.
         """
-        finalGradesDict = {'lx_problem_total_scored_points':0, 'lx_problem_total_possible_points':0}
-        stdOutString = ''
-        totScore = 0
-        posScore = 0
-
+        total_score = Decimal(0)
+        total_possible = Decimal(0)
+        feedback_sections = []
+        self._grading_feedback_by_problem = {}
+        score_pattern = re.compile(
+            r"^The number of points you have scored for this problem is "
+            r"(\d+(?:\.\d+)?) out of (\d+(?:\.\d+)?)\s*$",
+            re.MULTILINE,
+        )
 
         for assignment in self.assignments:
-            if assignment.amITEST():
-                # Extract the data from this test
-                if "source" in assignment.TEST_Cells[0]: # ipynb
-                    if (len(assignment.TEST_Cells[0]['outputs']) > 0): # if there is output
-                        C = assignment.TEST_Cells[0]
-                        stdout_cell = [cell for cell in C['outputs'] if cell.get('name','') == "stdout"]
-                        #s = C['outputs'][0]["text"]
-                        s = stdout_cell[0]["text"]
+            if not assignment.amITEST():
+                continue
+            cell = assignment.TEST_Cells[0]
+            metadata = cell['metadata']
+            problem = str(metadata['lx_problem_number'])
+            # Injected TEST metadata comes from the authoritative master.
+            possible = Decimal(str(metadata['lx_problem_points']))
+            total_possible += possible
+            outputs = cell.get('outputs', [])
+            stdout = ''.join(
+                output.get('text', '') for output in outputs
+                if output.get('output_type') == 'stream'
+                and output.get('name') == 'stdout'
+            )
+            errors = [output for output in outputs if output.get('output_type') == 'error']
+            matches = score_pattern.findall(stdout)
+            score = Decimal(0)
+            reason = ''
+            if errors:
+                error = errors[-1]
+                reason = '{}: {}'.format(error.get('ename', 'Error'), error.get('evalue', ''))
+            elif not matches:
+                reason = 'no score was produced'
+            else:
+                score, reported_possible = map(Decimal, matches[-1])
+                if reported_possible != possible or not 0 <= score <= possible:
+                    score = Decimal(0)
+                    reason = 'the test produced an invalid score'
 
-                        matchObj = re.search(r"(?:(?://|#)\s*(?:ASSIGNMENT|EXAM)\s+[A-Za-z0-9._-]+,\s*TEST\s+\d+,\s*POINTS?\s+\d+)",
-                                             C['source'], flags=re.M | re.DOTALL | re.UNICODE | re.I)
-                        if matchObj:
-                            C['source'] = matchObj.group(0).strip()
+            if reason:
+                warning = (
+                    f"Problem {problem}: grading tests did not complete ({reason}). "
+                    f"No points were recorded for this problem (0 out of {possible}). "
+                    "Check earlier code errors and make sure answer cells are Code, "
+                    "not Markdown. Contact course staff if the problem persists."
+                )
+                self._grading_feedback_by_problem[problem] = warning
+                stdout += '\n' + warning + '\n'
+            total_score += score
+            score_line = (
+                f"The number of points you have scored for this problem is {score} "
+                f"out of {possible}"
+            )
+            details = score_pattern.sub('', stdout).strip()
+            # Preserve the heading consumed by the Canvas comment summarizer.
+            feedback_sections.append(f"## TESTs for Problem {problem}\n\n{score_line}\n{details}\n")
 
-                        metadata = C['metadata']
-                        md='''##TESTs for Problem {} of {} {} were run and their results are as follows:\n'''.format(metadata['lx_problem_number'],
-                        metadata['lx_assignment_type'],metadata['lx_assignment_number'])
-                        stdOutString += '\n'+md+'\n'+s+'\n'
-                        sSplitByNewLines = s.split('\n')
-                        ls = ''.join(sSplitByNewLines[0:])
-                        matchObj = re.match(r"^.*points you have scored in total for this entire set of Problems is\s+(\d+(?:\.\d+)?)\s+out of\s+(\d+).*$", ls, re.UNICODE)
-                        #matchObj = re.match(r"^.*points you have accumulated thus far is\s+(\d+)\s+out of\s+(\d+).*$", ls, re.UNICODE)
-                        if matchObj:
-                            totScore=str(matchObj.group(1))
-                            posScore=str(matchObj.group(2))
-                            finalGradesDict['lx_problem_total_scored_points']=totScore
-                            finalGradesDict['lx_problem_total_possible_points']=posScore
-
-                else:
-                    print("Notebook type not supported.")
-
-
-
-        return finalGradesDict, stdOutString
+        finalGradesDict = {
+            'lx_problem_total_scored_points': str(total_score),
+            'lx_problem_total_possible_points': str(total_possible),
+        }
+        return finalGradesDict, '\n'.join(feedback_sections)
 
     def to_response_notebook(self, finalGradesDict=None, stdOutString=""):
         """
@@ -495,6 +503,20 @@ class IDSAssignmentNotebook(AssignmentNotebook):
                 metadata['lx_problem_cell_type'] = 'TEST_OUTPUT'
                 metadata.pop('lx_test_only', None)
                 metadata['lx_test_source_removed'] = True
+                # Tracebacks can contain the hidden test source even after the
+                # source field has been cleared. Keep only the exception message.
+                for output in cell.get('outputs', []):
+                    if output.get('output_type') == 'error':
+                        output['traceback'] = [
+                            '{}: {}'.format(output.get('ename', 'Error'), output.get('evalue', ''))
+                        ]
+                warning = getattr(self, '_grading_feedback_by_problem', {}).get(
+                    str(metadata.get('lx_problem_number'))
+                )
+                if warning:
+                    cell.setdefault('outputs', []).append(nbformat.v4.new_output(
+                        'stream', name='stdout', text=warning + '\n',
+                    ))
 
         if finalGradesDict is not None:
             md = '''The number of points you have scored in total for this entire set of Problems is {} out of {}.'''.format(

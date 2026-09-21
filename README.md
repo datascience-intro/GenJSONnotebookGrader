@@ -108,6 +108,11 @@ during grading and in the returned notebook. Reserved hidden-test cells are
 removed from submissions and replaced with the authoritative tests from the
 configured master immediately after each problem. Missing or duplicated
 predefined problem cells are rejected.
+Each hidden test reports its own score. If a test fails or produces no score,
+that problem receives zero with diagnostic feedback; completed problems retain
+their scores, and the response notebook is still returned. The maximum includes
+all problems. Answer cells converted to Markdown are not executed. Hidden-test
+tracebacks in the response show exception messages without the test source.
 Submitting a generated return notebook is also rejected: in apply mode the
 grader records 0 points with an explanatory Studium comment and does not create
 or attach another response notebook.
