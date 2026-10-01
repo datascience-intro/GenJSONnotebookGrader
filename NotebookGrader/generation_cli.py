@@ -97,6 +97,14 @@ def _validated_notebooks(
         if private_variants
         else course.student_notebooks()
     )
+    if not private_variants:
+        # Authored notebooks may keep prepared output for teaching. Published
+        # student notebooks must start with clean code cells.
+        for notebook in notebooks.values():
+            for cell in notebook.cells:
+                if cell.cell_type == "code":
+                    cell.outputs = []
+                    cell.execution_count = None
     for filename, notebook in notebooks.items():
         try:
             nbformat.validate(notebook)

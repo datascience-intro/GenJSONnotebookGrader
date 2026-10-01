@@ -146,6 +146,26 @@ class GenerationCLITests(unittest.TestCase):
         for filename in expected:
             nbformat.validate(nbformat.read(self.root / "private" / filename, as_version=4))
 
+    def test_student_lecture_drops_saved_execution_output(self):
+        lecture_path = self.masters / "Lecture.ipynb"
+        lecture = nbformat.read(lecture_path, as_version=4)
+        cell = nbformat.v4.new_code_cell("print('prepared')")
+        cell.execution_count = 3
+        cell.outputs = [nbformat.v4.new_output("stream", name="stdout", text="prepared\n")]
+        lecture.cells.append(cell)
+        nbformat.write(lecture, lecture_path)
+
+        config = self._write_config([1])
+        result = self._run(STUDENT_SCRIPT, config)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        published = nbformat.read(self.root / "student" / "Lecture.ipynb", as_version=4)
+        published_code = [cell for cell in published.cells if cell.cell_type == "code"]
+        self.assertEqual(len(published_code), 1)
+        self.assertEqual(published_code[0].source, "print('prepared')")
+        self.assertIsNone(published_code[0].execution_count)
+        self.assertEqual(published_code[0].outputs, [])
+        self.assertEqual(nbformat.read(lecture_path, as_version=4).cells[-1].execution_count, 3)
+
     def test_private_cli_can_generate_an_unreleased_assignment_explicitly(self):
         config = self._write_config([])
         result = self._run(PRIVATE_SCRIPT, config, "--assignment", "2")
